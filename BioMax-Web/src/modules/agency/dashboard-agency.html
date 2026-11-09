@@ -1,0 +1,1281 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel de Agencia</title>
+    <link rel="stylesheet" href="../../core/styles/global/variables.css" />
+    <link rel="stylesheet" href="../../core/styles/global/reset.css" />
+    <link rel="stylesheet" href="../../core/styles/global/base.css" />
+    <link rel="stylesheet" href="dashboard-agency.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <svg class="sprite" aria-hidden="true" focusable="false">
+      <symbol id="i-grid" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </symbol>
+      <symbol id="i-users" viewBox="0 0 24 24">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+      </symbol>
+      <symbol id="i-package" viewBox="0 0 24 24">
+        <path d="M21 8l-9-5-9 5 9 5 9-5z" />
+        <path d="M3 8v8l9 5 9-5V8" />
+        <path d="M12 13v8" />
+      </symbol>
+      <symbol id="i-truck" viewBox="0 0 24 24">
+        <path d="M1 3h15v13H1z" />
+        <path d="M16 8h4l3 4v4h-7V8z" />
+        <circle cx="5.5" cy="18.5" r="2.5" />
+        <circle cx="18.5" cy="18.5" r="2.5" />
+      </symbol>
+      <symbol id="i-logout" viewBox="0 0 24 24">
+        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+        <path d="M16 17l5-5-5-5" />
+        <path d="M21 12H9" />
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 24 24">
+        <path d="M18 6L6 18M6 6l12 12" />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M8 12.5l2.7 2.7L16 9.5" />
+      </symbol>
+      <symbol id="i-info" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v5" />
+        <path d="M12 8h.01" />
+      </symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24">
+        <path d="M12 3l10 18H2L12 3z" />
+        <path d="M12 10v5" />
+        <path d="M12 18h.01" />
+      </symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24">
+        <path d="M12 16V4" />
+        <path d="M7 9l5-5 5 5" />
+        <path d="M4 20h16" />
+      </symbol>
+      <symbol id="i-history" viewBox="0 0 24 24">
+        <path d="M3 12a9 9 0 109-9" />
+        <path d="M3 12H1m11-4v5l3 2" />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14" />
+      </symbol>
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="7" />
+        <path d="M21 21l-4.3-4.3" />
+      </symbol>
+      <symbol id="i-speed" viewBox="0 0 24 24">
+        <path d="M12 14l4-8" />
+        <path d="M4.93 19.07A10 10 0 1121 12" />
+      </symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24">
+        <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" />
+        <circle cx="12" cy="12" r="3" />
+      </symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+        <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+      </symbol>
+      <symbol id="i-dollar" viewBox="0 0 24 24">
+        <path d="M12 2v20" />
+        <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+      </symbol>
+      <symbol id="i-trend" viewBox="0 0 24 24">
+        <path d="M3 17l6-6 4 4 8-8" />
+        <path d="M14 7h7v7" />
+      </symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </symbol>
+    </svg>
+
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="sidebar-brand-row">
+          <img id="agencia-logo-sidebar" class="sidebar-logo" alt="" hidden />
+          <div>
+            <span id="agencia-nombre-sidebar">Cargando...</span>
+            <span class="sidebar-badge" id="agencia-codigo-badge">AG--</span>
+          </div>
+        </div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Principal">
+        <ul class="sidebar-menu">
+          <li>
+            <a
+              href="#view-resumen-agente"
+              class="nav-link active"
+              data-target="view-resumen-agente"
+              aria-current="page"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-grid"></use>
+              </svg>
+              <span>Resumen de sucursal</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="#view-clientes"
+              class="nav-link"
+              data-target="view-clientes"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-users"></use>
+              </svg>
+              <span>Registrar Clientes</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="#view-paquetes"
+              class="nav-link"
+              data-target="view-paquetes"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-package"></use>
+              </svg>
+              <span>Guías y solicitudes</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="#view-contenedores-agente"
+              class="nav-link"
+              data-target="view-contenedores-agente"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-truck"></use>
+              </svg>
+              <span>Contenedores y cortes</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <button type="button" id="logout-btn" class="btn-logout">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-logout"></use>
+          </svg>
+          Cerrar sesión
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <h2 id="page-title">Resumen de sucursal</h2>
+        <div class="header-actions">
+          <button
+            type="button"
+            id="btn-historial-solicitudes"
+            class="btn-secondary btn-sm"
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-history"></use>
+            </svg>
+            Historial
+            <span class="badge-count" id="badge-count-sol-header" hidden
+              >0</span
+            >
+          </button>
+          <button
+            type="button"
+            id="agencia-user-badge"
+            class="user-info"
+            aria-label="Ver perfil de sucursal"
+          >
+            <span class="avatar" id="agencia-avatar" aria-hidden="true"
+              >SU</span
+            >
+            <span id="agencia-user-name">Sucursal</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        <!-- RESUMEN DE SUCURSAL -->
+        <section
+          id="view-resumen-agente"
+          class="dashboard-view"
+          aria-labelledby="page-title"
+        >
+          <div class="grid-stats grid-stats--6">
+            <article class="stat-card stat-card--metric">
+              <div class="stat-card__top">
+                <h3>Clientes activos</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-users"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-clientes-agente">0</div>
+            </article>
+
+            <article class="stat-card stat-card--metric">
+              <div class="stat-card__top">
+                <h3>Bultos / paquetes</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-package"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-paquetes-transito">0</div>
+            </article>
+
+            <article class="stat-card stat-card--metric">
+              <div class="stat-card__top">
+                <h3>Contenedores</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-truck"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-contenedores-agente">0</div>
+            </article>
+
+            <article class="stat-card stat-card--metric">
+              <div class="stat-card__top">
+                <h3>Pendientes de recibir</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-clock"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-pendientes-recibir">0</div>
+            </article>
+
+            <article class="stat-card stat-card--metric stat-card--highlight">
+              <div class="stat-card__top">
+                <h3>Saldo a pagar</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-dollar"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-saldo-pagar">$0.00</div>
+            </article>
+
+            <article class="stat-card stat-card--metric">
+              <div class="stat-card__top">
+                <h3>Pagado (30 días)</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-trend"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-pagado-30">$0.00</div>
+            </article>
+          </div>
+
+          <div class="dashboard-row">
+            <article class="stat-card dashboard-card">
+              <div class="card-toolbar">
+                <div>
+                  <h3 class="card-title">Movimiento de costos (30 días)</h3>
+                  <p class="card-desc">
+                    Costo generado por tus contenedores y bultos
+                  </p>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="chart-costos-agencia-30" height="220"></canvas>
+              </div>
+            </article>
+
+            <article class="stat-card dashboard-card">
+              <div class="card-toolbar">
+                <div>
+                  <h3 class="card-title">Contenedores por estado</h3>
+                  <p class="card-desc">Distribución de tu operación</p>
+                </div>
+              </div>
+              <div id="estados-contenedores-agencia" class="status-bars">
+                <p class="empty-msg">Sin datos de contenedores.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="dashboard-row dashboard-row--equal">
+            <article class="stat-card dashboard-card">
+              <div class="card-toolbar">
+                <div>
+                  <h3 class="card-title">Contenedores recientes</h3>
+                  <p class="card-desc">Últimos cortes de tu sucursal</p>
+                </div>
+              </div>
+              <div id="lista-contenedores-recientes" class="activity-list">
+                <p class="empty-msg">No hay contenedores recientes.</p>
+              </div>
+            </article>
+
+            <article class="stat-card dashboard-card">
+              <h3 class="card-title">Solicitudes rápidas</h3>
+              <p class="card-desc" style="margin-bottom: 12px">
+                Envía peticiones especiales al administrador
+              </p>
+              <div class="btn-row btn-row--wrap">
+                <button
+                  type="button"
+                  class="btn-primary"
+                  id="abrir-modal-velocidad"
+                >
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-speed"></use>
+                  </svg>
+                  Velocidad
+                </button>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  id="abrir-modal-inspeccion"
+                >
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-eye"></use>
+                  </svg>
+                  Inspeccionar
+                </button>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  id="abrir-modal-consolidor"
+                >
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-layers"></use>
+                  </svg>
+                  Consolidador
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- CLIENTES -->
+        <section
+          id="view-clientes"
+          class="dashboard-view"
+          hidden
+          aria-label="Clientes"
+        >
+          <article class="stat-card">
+            <div class="card-toolbar">
+              <div>
+                <h3 class="card-title">Directorio de clientes</h3>
+                <p class="card-desc">Gestión de clientes de tu sucursal</p>
+              </div>
+              <button type="button" class="btn-primary" id="btn-nuevo-cliente">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-plus"></use>
+                </svg>
+                Registrar cliente
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Nombre</th>
+                    <th scope="col">Teléfono</th>
+                    <th scope="col">Departamento</th>
+                    <th scope="col">Dirección</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-clientes-body">
+                  <tr class="empty-row">
+                    <td colspan="7">Cargando clientes...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- GUÍAS Y SOLICITUDES -->
+        <section
+          id="view-paquetes"
+          class="dashboard-view"
+          hidden
+          aria-label="Guías y solicitudes"
+        >
+          <div class="card-toolbar">
+            <div>
+              <h2 class="section-title">
+                Paquetes de agente:
+                <span id="agente-titulo-nombre">SOCIOS</span>
+              </h2>
+              <p class="card-desc">
+                Saldo disponible:
+                <strong id="saldo-disponible">$0.00</strong>
+              </p>
+            </div>
+            <div class="search-wrap">
+              <svg class="icon search-wrap__icon" aria-hidden="true">
+                <use href="#i-search"></use>
+              </svg>
+              <input
+                type="search"
+                id="buscar-corte-input"
+                class="form-input"
+                placeholder="Buscar por cliente o tracking..."
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <div class="btn-row btn-row--wrap">
+            <button type="button" class="btn-primary" id="btn-top-consolidor">
+              Consolidador
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              id="btn-top-inspeccionar"
+            >
+              Inspeccionar
+            </button>
+            <button type="button" class="btn-secondary" id="btn-top-velocidad">
+              Cambiar velocidad
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              id="btn-top-solicitudes"
+            >
+              Solicitudes
+              <span class="badge-count" id="badge-count-sol">0</span>
+            </button>
+          </div>
+
+          <div id="grid-cortes-tarjetas" class="grid-cards">
+            <p class="empty-msg">Cargando cortes y contenedores asignados...</p>
+          </div>
+        </section>
+
+        <!-- CONTENEDORES -->
+        <section
+          id="view-contenedores-agente"
+          class="dashboard-view"
+          hidden
+          aria-label="Contenedores"
+        >
+          <article class="stat-card">
+            <h3 class="card-title">Contenedores y cortes sincronizados</h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Tipo de envío</th>
+                    <th scope="col">Corte / contenedor</th>
+                    <th scope="col">Fecha de corte</th>
+                    <th scope="col">Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-contenedores-agente-body">
+                  <tr class="empty-row">
+                    <td colspan="4">
+                      No hay contenedores asignados a tu sucursal.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </div>
+
+      <!-- Modal: velocidad -->
+      <div id="modal-sol-velocidad" class="modal-overlay" hidden>
+        <div
+          class="modal-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="vel-title"
+        >
+          <div class="modal-header">
+            <h3 id="vel-title">Solicitar cambio de velocidad</h3>
+            <p class="modal-subtext">Cambio de modalidad de envío</p>
+          </div>
+          <form id="form-sol-velocidad">
+            <div class="form-field">
+              <label class="form-label" for="vel-cliente"
+                >Nombre del cliente *</label
+              >
+              <input
+                type="text"
+                id="vel-cliente"
+                class="form-input"
+                required
+                maxlength="120"
+                placeholder="Ej. Juan Pérez"
+                autocomplete="name"
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="vel-tracking"
+                >Números de tracking *</label
+              >
+              <input
+                type="text"
+                id="vel-tracking"
+                class="form-input"
+                required
+                maxlength="200"
+                placeholder="Tracking del paquete"
+                autocomplete="off"
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="vel-origen"
+                >Velocidad original *</label
+              >
+              <select id="vel-origen" class="form-input" required>
+                <option value="">Seleccione</option>
+                <option value="Aéreo">Aéreo</option>
+                <option value="Marítimo">Marítimo</option>
+                <option value="Ultra">Ultra</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="vel-nuevo"
+                >Velocidad nueva *</label
+              >
+              <select id="vel-nuevo" class="form-input" required>
+                <option value="">Seleccione</option>
+                <option value="Aéreo">Aéreo</option>
+                <option value="Marítimo">Marítimo</option>
+                <option value="Ultra">Ultra</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="modal-actions">
+              <button type="submit" class="btn-primary" id="btn-enviar-vel">
+                Enviar solicitud
+              </button>
+              <button
+                type="button"
+                class="btn-secondary"
+                id="cerrar-vel"
+                data-cerrar
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal: inspección -->
+      <div id="modal-sol-inspeccion" class="modal-overlay" hidden>
+        <div
+          class="modal-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="insp-title"
+        >
+          <div class="modal-header">
+            <h3 id="insp-title">Solicitar inspección</h3>
+            <p class="modal-subtext">
+              Revisión física o verificación de contenido
+            </p>
+          </div>
+          <form id="form-sol-inspeccion">
+            <div class="form-field">
+              <label class="form-label" for="insp-cliente"
+                >Nombre del cliente *</label
+              >
+              <input
+                type="text"
+                id="insp-cliente"
+                class="form-input"
+                required
+                maxlength="120"
+                placeholder="Ej. Juan Pérez"
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="insp-tracking"
+                >Números de tracking *</label
+              >
+              <input
+                type="text"
+                id="insp-tracking"
+                class="form-input"
+                required
+                maxlength="200"
+                placeholder="Tracking del paquete"
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="insp-tipo"
+                >Tipo de inspección *</label
+              >
+              <select id="insp-tipo" class="form-input" required>
+                <option value="">Seleccione el tipo</option>
+                <option value="Fotográfica">Fotográfica</option>
+                <option value="Física Detallada">Física detallada</option>
+                <option value="Verificación de Contenido">
+                  Verificación de contenido
+                </option>
+              </select>
+            </div>
+            <div class="modal-actions">
+              <button type="submit" class="btn-primary">
+                Enviar solicitud
+              </button>
+              <button
+                type="button"
+                class="btn-secondary"
+                id="cerrar-insp"
+                data-cerrar
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal: consolidador -->
+      <div id="modal-sol-consolidor" class="modal-overlay" hidden>
+        <div
+          class="modal-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cons-title"
+        >
+          <div class="modal-header">
+            <h3 id="cons-title">Solicitar consolidador</h3>
+            <p class="modal-subtext">Agrupación de paquetes en un solo envío</p>
+          </div>
+          <form id="form-sol-consolidor">
+            <div class="form-field">
+              <label class="form-label" for="cons-cliente"
+                >Nombre del cliente *</label
+              >
+              <input
+                type="text"
+                id="cons-cliente"
+                class="form-input"
+                required
+                maxlength="120"
+                placeholder="Ej. Juan Pérez"
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="cons-tracking"
+                >Números de tracking *</label
+              >
+              <input
+                type="text"
+                id="cons-tracking"
+                class="form-input"
+                required
+                maxlength="200"
+                placeholder="Trackings a consolidar (separados por coma)"
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="cons-notas"
+                >Notas adicionales (opcional)</label
+              >
+              <textarea
+                id="cons-notas"
+                class="form-input"
+                rows="2"
+                maxlength="300"
+                placeholder="Indicaciones para el administrador..."
+              ></textarea>
+            </div>
+            <div class="modal-actions">
+              <button type="submit" class="btn-primary">
+                Enviar solicitud
+              </button>
+              <button
+                type="button"
+                class="btn-secondary"
+                id="cerrar-cons"
+                data-cerrar
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal: historial -->
+      <div id="modal-historial" class="modal-overlay" hidden>
+        <div
+          class="modal-card modal-card--md"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="hist-title"
+        >
+          <div class="modal-header modal-header--row">
+            <div>
+              <h3 id="hist-title">Historial de solicitudes</h3>
+              <p class="modal-subtext">
+                Peticiones enviadas y respuestas del administrador
+              </p>
+            </div>
+            <button
+              type="button"
+              class="icon-btn"
+              id="cerrar-historial-x"
+              aria-label="Cerrar"
+              data-cerrar
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close"></use>
+              </svg>
+            </button>
+          </div>
+          <div id="contenedor-historial-lista" class="historial-lista">
+            <p class="empty-msg">Cargando historial...</p>
+          </div>
+          <button
+            type="button"
+            class="btn-secondary btn-block"
+            id="cerrar-historial-btn"
+            data-cerrar
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal: detalle bultos del corte -->
+      <div id="modal-detalle-corte-bultos" class="modal-overlay" hidden>
+        <div
+          class="modal-card modal-card--lg"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bulto-modal-titulo"
+        >
+          <div class="modal-header modal-header--row">
+            <div>
+              <h3 id="bulto-modal-titulo">Bultos del corte</h3>
+              <p class="modal-subtext" id="bulto-modal-sub">
+                Creado: -- | Cantidad: 0
+              </p>
+            </div>
+            <button
+              type="button"
+              class="icon-btn"
+              id="cerrar-modal-bultos-x"
+              aria-label="Cerrar"
+              data-cerrar
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close"></use>
+              </svg>
+            </button>
+          </div>
+          <div class="cost-summary">
+            <h4 class="subpanel__title">Resumen de costos</h4>
+            <div class="cost-summary__row">
+              <span
+                >Costo total: <strong id="costo-total-val">$0.00</strong></span
+              >
+              <span class="text-success"
+                >Pagado: <strong id="total-pagado-val">$0.00</strong></span
+              >
+            </div>
+            <p class="text-danger">
+              Saldo a pagar: <strong id="saldo-pagar-val">$0.00</strong>
+            </p>
+            <p class="cell-muted" id="desglose-bultos-text">
+              Aéreo: 0 bultos, 0.00 lbs
+            </p>
+          </div>
+          <div class="btn-row btn-row--sm">
+            <button
+              type="button"
+              class="btn-secondary btn-sm"
+              data-sort-bultos="aereo"
+            >
+              Aéreos primero
+            </button>
+            <button
+              type="button"
+              class="btn-secondary btn-sm"
+              data-sort-bultos="maritimo"
+            >
+              Marítimos primero
+            </button>
+            <button
+              type="button"
+              class="btn-secondary btn-sm"
+              data-sort-bultos="original"
+            >
+              Orden original
+            </button>
+          </div>
+          <div class="table-responsive table-responsive--scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Identificación</th>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Peso (lbs)</th>
+                  <th scope="col">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-bultos-body">
+                <tr class="empty-row">
+                  <td colspan="5">No hay bultos en este corte.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="modal-actions modal-actions--end">
+            <button
+              type="button"
+              class="btn-secondary"
+              id="btn-marcar-recibido"
+            >
+              Actualizar
+            </button>
+            <button type="button" class="btn-primary" id="btn-abonar-monto">
+              Abonar monto
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: ver foto del bulto (como en admin) -->
+      <div id="modal-foto-bulto" class="modal-overlay" hidden>
+        <div
+          class="modal-card modal-card--md"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="foto-bulto-title"
+        >
+          <div class="modal-header modal-header--row">
+            <h3 id="foto-bulto-title">Foto del bulto</h3>
+            <button
+              type="button"
+              class="icon-btn"
+              id="cerrar-modal-foto-bulto"
+              aria-label="Cerrar"
+              data-cerrar
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close"></use>
+              </svg>
+            </button>
+          </div>
+          <div class="foto-bulto-wrap">
+            <img
+              id="foto-bulto-preview"
+              alt="Foto del bulto"
+              style="
+                display: block;
+                max-width: 100%;
+                max-height: 70vh;
+                margin: 0 auto;
+                border-radius: 8px;
+                object-fit: contain;
+              "
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: abonar -->
+      <div id="modal-abonar" class="modal-overlay" hidden>
+        <div class="modal-card modal-card--sm" role="dialog" aria-modal="true">
+          <div class="modal-header">
+            <h3>Abonar monto</h3>
+            <p class="modal-subtext" id="abono-saldo-label">
+              Saldo pendiente: $0.00
+            </p>
+          </div>
+          <form id="form-abonar">
+            <div class="form-field">
+              <label class="form-label" for="abono-monto-input"
+                >Monto a abonar ($)</label
+              >
+              <input
+                type="number"
+                id="abono-monto-input"
+                class="form-input"
+                min="0.01"
+                step="0.01"
+                required
+              />
+            </div>
+            <div class="modal-actions">
+              <button type="submit" class="btn-primary">Confirmar abono</button>
+              <button type="button" class="btn-secondary" data-cerrar>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal: gestionar bultos -->
+      <div id="modal-gestionar-bultos" class="modal-overlay" hidden>
+        <div
+          class="modal-card modal-card--xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mg-corte-titulo"
+        >
+          <div class="modal-header modal-header--row">
+            <div>
+              <h3 id="mg-corte-titulo">Bultos del contenedor</h3>
+              <p class="modal-subtext" id="mg-corte-sub">Agencia: --</p>
+            </div>
+            <button
+              type="button"
+              class="icon-btn"
+              id="cerrar-mg-bultos"
+              aria-label="Cerrar"
+              data-cerrar
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close"></use>
+              </svg>
+            </button>
+          </div>
+          <section class="subpanel" aria-labelledby="bulto-form-title">
+            <h4 class="subpanel__title" id="bulto-form-title">Agregar bulto</h4>
+            <form id="form-agregar-bulto" class="form-grid">
+              <input type="hidden" id="mg-corte-id" />
+              <input type="hidden" id="mg-agencia-id" />
+              <div class="form-field">
+                <label class="form-label" for="bulto-cliente-select"
+                  >Cliente *</label
+                >
+                <select id="bulto-cliente-select" class="form-input" required>
+                  <option value="">Cargando clientes...</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="bulto-tracking"
+                  >Tracking / guía *</label
+                >
+                <input
+                  type="text"
+                  id="bulto-tracking"
+                  class="form-input"
+                  required
+                  maxlength="60"
+                  placeholder="Ej. 1Z9999..."
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="bulto-peso"
+                  >Peso (libras) *</label
+                >
+                <input
+                  type="number"
+                  id="bulto-peso"
+                  class="form-input"
+                  min="0.01"
+                  max="9999"
+                  step="0.01"
+                  required
+                  placeholder="0.00"
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="bulto-costo"
+                  >Costo / tarifa ($)</label
+                >
+                <input
+                  type="number"
+                  id="bulto-costo"
+                  class="form-input"
+                  min="0"
+                  max="9999999"
+                  step="0.01"
+                  placeholder="0.00"
+                />
+              </div>
+              <div class="form-field form-field--full">
+                <span class="form-label" id="foto-label"
+                  >Foto del paquete (opcional)</span
+                >
+                <div class="file-upload-wrapper">
+                  <label for="bulto-foto-input" class="file-upload-btn">
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-upload"></use>
+                    </svg>
+                    Examinar foto
+                  </label>
+                  <span id="bulto-foto-filename" class="file-chosen-text"
+                    >Ningún archivo seleccionado</span
+                  >
+                  <input
+                    type="file"
+                    id="bulto-foto-input"
+                    accept="image/png,image/jpeg,image/webp"
+                    class="file-input"
+                    aria-labelledby="foto-label"
+                  />
+                </div>
+              </div>
+              <div class="form-field form-field--full form-field--end">
+                <button type="submit" class="btn-primary">Guardar bulto</button>
+              </div>
+            </form>
+          </section>
+          <h4 class="subpanel__title">Bultos registrados</h4>
+          <div class="table-responsive table-responsive--scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Foto</th>
+                  <th scope="col">Tracking</th>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Peso</th>
+                  <th scope="col">Costo</th>
+                  <th scope="col">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-gestion-bultos-body">
+                <tr class="empty-row">
+                  <td colspan="6">
+                    Selecciona un contenedor para ver sus bultos.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: cliente -->
+      <div id="modal-nuevo-cliente" class="modal-overlay" hidden>
+        <div
+          class="modal-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-cli-titulo"
+        >
+          <div class="modal-header">
+            <h3 id="modal-cli-titulo">Registrar cliente</h3>
+            <p class="modal-subtext">Datos de contacto del cliente</p>
+          </div>
+          <form id="form-crear-cliente">
+            <input type="hidden" id="cli-edit-id" />
+            <div class="form-field">
+              <label class="form-label" for="cli-nombre"
+                >Nombre completo *</label
+              >
+              <input
+                type="text"
+                id="cli-nombre"
+                class="form-input"
+                required
+                maxlength="120"
+                placeholder="Ej. Carlos Andrés"
+                autocomplete="name"
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="cli-telefono"
+                >Teléfono / WhatsApp *</label
+              >
+              <input
+                type="text"
+                id="cli-telefono"
+                class="form-input"
+                required
+                maxlength="30"
+                placeholder="Ej. 85963221"
+                autocomplete="tel"
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="cli-departamento"
+                >Ciudad / estado</label
+              >
+              <input
+                type="text"
+                id="cli-departamento"
+                class="form-input"
+                maxlength="80"
+                placeholder="Ej. Jacksonville / Miami..."
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="cli-direccion"
+                >Dirección física</label
+              >
+              <input
+                type="text"
+                id="cli-direccion"
+                class="form-input"
+                maxlength="250"
+                placeholder="Ej. 820 Ocean Drive, Miami Beach, FL 33139"
+              />
+            </div>
+            <div class="modal-actions">
+              <button type="submit" class="btn-primary">Guardar cliente</button>
+              <button
+                type="button"
+                class="btn-secondary"
+                id="cerrar-modal-cliente"
+                data-cerrar
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal: perfil sucursal -->
+      <div id="modal-perfil-agente" class="modal-overlay" hidden>
+        <div
+          class="modal-card modal-card--md"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="perfil-title"
+        >
+          <div class="modal-header modal-header--center">
+            <img id="perf-logo" class="agency-logo-lg" alt="" hidden />
+            <h3 id="perfil-title">Información de tu sucursal</h3>
+            <p class="modal-subtext">Datos de configuración de tu cuenta</p>
+          </div>
+          <dl class="detail-list">
+            <div>
+              <dt>Nombre</dt>
+              <dd id="perf-nombre">--</dd>
+            </div>
+            <div>
+              <dt>Código</dt>
+              <dd id="perf-codigo">--</dd>
+            </div>
+            <div>
+              <dt>Contacto</dt>
+              <dd id="perf-contacto">--</dd>
+            </div>
+            <div>
+              <dt>Teléfono</dt>
+              <dd id="perf-telefono">--</dd>
+            </div>
+            <div>
+              <dt>Correo</dt>
+              <dd id="perf-correo">--</dd>
+            </div>
+            <div>
+              <dt>Dirección</dt>
+              <dd id="perf-direccion">--</dd>
+            </div>
+          </dl>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-primary btn-block"
+              id="cerrar-modal-perfil"
+              data-cerrar
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Confirmación -->
+      <div
+        id="custom-confirm-modal"
+        class="modal-overlay modal-overlay--top"
+        hidden
+      >
+        <div
+          class="modal-card modal-card--sm"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="custom-confirm-title"
+          aria-describedby="custom-confirm-message"
+        >
+          <div class="modal-header modal-header--center">
+            <span class="modal-icon modal-icon--warning">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-alert"></use>
+              </svg>
+            </span>
+            <h3 id="custom-confirm-title">Confirmación</h3>
+            <p id="custom-confirm-message" class="modal-subtext">
+              ¿Estás seguro de realizar esta acción?
+            </p>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-primary" id="custom-confirm-yes">
+              Sí, continuar
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              id="custom-confirm-no"
+              data-cerrar
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alerta -->
+      <div
+        id="custom-alert-modal"
+        class="modal-overlay modal-overlay--top"
+        hidden
+      >
+        <div
+          class="modal-card modal-card--sm"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="custom-alert-title"
+          aria-describedby="custom-alert-message"
+        >
+          <div class="modal-header modal-header--center">
+            <span class="modal-icon modal-icon--info">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-info"></use>
+              </svg>
+            </span>
+            <h3 id="custom-alert-title">Aviso</h3>
+            <p id="custom-alert-message" class="modal-subtext">Mensaje</p>
+          </div>
+          <button
+            type="button"
+            class="btn-primary btn-block"
+            id="custom-alert-btn"
+            data-cerrar
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="dashboard-agency.js"></script>
+  </body>
+</html>

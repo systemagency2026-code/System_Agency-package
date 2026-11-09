@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BioMax | Inicio de Sesión</title>
+    <link rel="stylesheet" href="./src/core/styles/global/variables.css" />
+    <link rel="stylesheet" href="./src/core/styles/global/base.css" />
+    <link rel="stylesheet" href="./src/core/styles/global/reset.css" />
+    <link rel="stylesheet" href="./src/modules/auth/auth.css" />
+  </head>
+  <body>
+    <div id="app-preloader" aria-live="polite">
+      <div class="preloader-bg" aria-hidden="true">
+        <span class="preloader-orb preloader-orb--1"></span>
+        <span class="preloader-orb preloader-orb--2"></span>
+        <span class="preloader-orb preloader-orb--3"></span>
+      </div>
+
+      <div class="preloader-content">
+        <div class="preloader-logo-wrapper">
+          <div class="preloader-logo-glow" aria-hidden="true"></div>
+          <img
+            src="./assets/logo.png"
+            alt="Logo BioMax"
+            id="preloader-logo"
+            onerror="
+              this.style.display = 'none';
+              document.getElementById('preloader-logo-fallback').style.display =
+                'flex';
+            "
+          />
+          <div
+            id="preloader-logo-fallback"
+            class="preloader-logo-placeholder"
+            style="display: none"
+          ></div>
+        </div>
+
+        <h2 class="preloader-title">BioMax</h2>
+        <p class="preloader-subtitle" id="preloader-subtitle">Loading…</p>
+
+        <div class="preloader-progress-block" id="preloader-progress-block">
+          <div class="preloader-bar-container">
+            <div class="preloader-bar-fill" id="preloader-fill"></div>
+          </div>
+          <span class="preloader-percentage" id="preloader-text">0%</span>
+        </div>
+
+        <button
+          type="button"
+          id="preloader-enter-btn"
+          class="preloader-enter-btn"
+          hidden
+        >
+          Entrar
+        </button>
+      </div>
+    </div>
+
+    <audio
+      id="preloader-audio"
+      src="./assets/audio/preloader-song.mp3"
+      preload="auto"
+    ></audio>
+
+    <div
+      class="auth-wrapper"
+      id="main-auth-container"
+      style="opacity: 0; transition: opacity 0.6s ease"
+    >
+      <div
+        class="auth-hero-panel"
+        style="
+          background-image:
+            linear-gradient(
+              180deg,
+              rgba(9, 13, 22, 0.45) 0%,
+              rgba(9, 13, 22, 0.88) 100%
+            ),
+            url(&quot;./assets/background/background-login.jpg&quot;);
+          background-size: cover;
+          background-position: center;
+        "
+      >
+        <div class="hero-top-badge">
+          <span class="brand-tag">Welcome to BioMax</span>
+        </div>
+
+        <div class="hero-bottom-card">
+          <h1>BioMax</h1>
+          <p>
+            Sistema de gestión logística y control operativo de alta precisión.
+          </p>
+        </div>
+
+        <div class="hero-footer">
+          <p>© 2026 BioMax · Todos los derechos reservados.</p>
+        </div>
+      </div>
+
+      <div class="auth-form-panel">
+        <div class="form-panel-inner">
+          <div class="auth-header">
+            <div class="logo-box" id="logo-container">
+              <img
+                src="./assets/logo.png"
+                alt="Logo BioMax"
+                onerror="this.outerHTML = '<span>BM</span>'"
+              />
+            </div>
+            <h2 id="form-title">Solicitud de Afiliación</h2>
+            <p id="form-subtitle">Ingresa tus datos para unirte a la red</p>
+          </div>
+
+          <div id="alert-box" class="alert" style="display: none"></div>
+
+          <form id="register-form" class="auth-form">
+            <div class="form-group">
+              <label for="reg-negocio">Nombre del Negocio / Agencia *</label>
+              <input
+                type="text"
+                id="reg-negocio"
+                required
+                placeholder="Ej. Envíos del Norte"
+              />
+            </div>
+            <div class="form-group">
+              <label for="reg-contacto">Nombre del Contacto *</label>
+              <input
+                type="text"
+                id="reg-contacto"
+                required
+                placeholder="Tu nombre completo"
+              />
+            </div>
+            <div class="form-group">
+              <label for="reg-correo">Correo electrónico *</label>
+              <input
+                type="email"
+                id="reg-correo"
+                required
+                placeholder="contacto@negocio.com"
+              />
+            </div>
+            <div class="form-group">
+              <label for="reg-telefono">Teléfono / WhatsApp *</label>
+              <input
+                type="tel"
+                id="reg-telefono"
+                required
+                placeholder="Ej. +1 (XXX) XXX-XXXX"
+              />
+            </div>
+            <div class="form-group">
+              <label for="reg-departamento">Ciudad / Estado</label>
+              <input
+                type="text"
+                id="reg-departamento"
+                placeholder="Ej. Miami, Florida"
+              />
+            </div>
+            <div class="form-group">
+              <label for="reg-referencia">ID de Referencia (Opcional)</label>
+              <input
+                type="text"
+                id="reg-referencia"
+                placeholder="Código o referencia interna"
+              />
+            </div>
+            <button type="submit" class="btn-primary" id="register-btn">
+              Enviar Solicitud de Afiliación
+            </button>
+            <div class="auth-switch">
+              <p>
+                ¿Ya tienes un usuario asignado?
+                <a href="#" id="to-login">Iniciar Sesión</a>
+              </p>
+            </div>
+          </form>
+
+          <form id="login-form" class="auth-form" style="display: none">
+            <div class="form-group">
+              <label for="login-email">Correo electrónico</label>
+              <input
+                type="email"
+                id="login-email"
+                required
+                placeholder="correo@empresa.com"
+              />
+            </div>
+            <div class="form-group">
+              <label for="login-password">Contraseña</label>
+              <input
+                type="password"
+                id="login-password"
+                required
+                placeholder="••••••••"
+              />
+            </div>
+            <button type="submit" class="btn-primary" id="login-btn">
+              Ingresar al Sistema
+            </button>
+            <div class="auth-switch">
+              <p>
+                ¿Quieres afiliar una nueva agencia?
+                <a href="#" id="to-register">Registrar nueva agencia</a>
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./src/modules/auth/auth.js"></script>
+  </body>
+</html>

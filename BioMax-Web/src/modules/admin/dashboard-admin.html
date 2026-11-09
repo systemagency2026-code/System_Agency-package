@@ -1,0 +1,1553 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel Administrativo</title>
+    <link rel="stylesheet" href="../../core/styles/global/variables.css" />
+    <link rel="stylesheet" href="../../core/styles/global/reset.css" />
+    <link rel="stylesheet" href="../../core/styles/global/base.css" />
+    <link rel="stylesheet" href="dashboard-admin.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <svg class="sprite" aria-hidden="true" focusable="false">
+      <symbol id="i-grid" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </symbol>
+      <symbol id="i-inbox" viewBox="0 0 24 24">
+        <path d="M3 13l3-8h12l3 8" />
+        <path d="M3 13v6a2 2 0 002 2h14a2 2 0 002-2v-6" />
+        <path d="M3 13h5a4 4 0 008 0h5" />
+      </symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24">
+        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 01-3.46 0" />
+      </symbol>
+      <symbol id="i-building" viewBox="0 0 24 24">
+        <path d="M4 21V5a2 2 0 012-2h8a2 2 0 012 2v16" />
+        <path d="M16 9h2a2 2 0 012 2v10" />
+        <path d="M3 21h18" />
+        <path d="M8 7h4M8 11h4M8 15h4" />
+      </symbol>
+      <symbol id="i-box" viewBox="0 0 24 24">
+        <path d="M21 8l-9-5-9 5 9 5 9-5z" />
+        <path d="M3 8v8l9 5 9-5V8" />
+        <path d="M12 13v8" />
+      </symbol>
+      <symbol id="i-logout" viewBox="0 0 24 24">
+        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+        <path d="M16 17l5-5-5-5" />
+        <path d="M21 12H9" />
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 24 24">
+        <path d="M18 6L6 18M6 6l12 12" />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M8 12.5l2.7 2.7L16 9.5" />
+      </symbol>
+      <symbol id="i-info" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v5" />
+        <path d="M12 8h.01" />
+      </symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24">
+        <path d="M12 3l10 18H2L12 3z" />
+        <path d="M12 10v5" />
+        <path d="M12 18h.01" />
+      </symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24">
+        <path d="M12 16V4" />
+        <path d="M7 9l5-5 5 5" />
+        <path d="M4 20h16" />
+      </symbol>
+      <symbol id="i-enter" viewBox="0 0 24 24">
+        <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
+        <path d="M10 17l5-5-5-5" />
+        <path d="M15 12H3" />
+      </symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24">
+        <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" />
+        <circle cx="12" cy="12" r="3" />
+      </symbol>
+      <symbol id="i-eye-off" viewBox="0 0 24 24">
+        <path d="M3 3l18 18" />
+        <path d="M10.6 6.1A9.8 9.8 0 0112 6c6 0 10 6 10 6a17 17 0 01-3.2 3.8" />
+        <path d="M6.6 6.6C3.7 8.3 2 12 2 12s4 7 10 7a9.6 9.6 0 004.2-1" />
+      </symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24">
+        <path d="M4 7h16" />
+        <path d="M9 7V4h6v3" />
+        <path d="M6 7l1 13h10l1-13" />
+      </symbol>
+      <symbol id="i-back" viewBox="0 0 24 24">
+        <path d="M19 12H5" />
+        <path d="M11 18l-6-6 6-6" />
+      </symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24">
+        <path d="M6 9l6 6 6-6" />
+      </symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24">
+        <rect x="9" y="9" width="12" height="12" rx="2" />
+        <path d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1" />
+      </symbol>
+      <symbol id="i-key" viewBox="0 0 24 24">
+        <circle cx="8" cy="15" r="4" />
+        <path d="M11 12l9-9" />
+        <path d="M16 7l3 3" />
+      </symbol>
+      <symbol id="i-dollar" viewBox="0 0 24 24">
+        <path d="M12 2v20" />
+        <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+      </symbol>
+      <symbol id="i-trend" viewBox="0 0 24 24">
+        <path d="M3 17l6-6 4 4 8-8" />
+        <path d="M14 7h7v7" />
+      </symbol>
+      <symbol id="i-package" viewBox="0 0 24 24">
+        <path d="M21 8l-9-5-9 5 9 5 9-5z" />
+        <path d="M3 8v8l9 5 9-5V8" />
+        <path d="M12 13v8" />
+      </symbol>
+    </svg>
+
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        BioMax
+        <span class="sidebar-badge">Administrador Global</span>
+      </div>
+      <nav class="sidebar-nav" aria-label="Principal">
+        <ul class="sidebar-menu">
+          <li>
+            <a
+              href="#view-resumen"
+              class="nav-link active"
+              data-target="view-resumen"
+              aria-current="page"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-grid"></use>
+              </svg>
+              <span>Resumen general</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="#view-solicitudes"
+              class="nav-link"
+              data-target="view-solicitudes"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-inbox"></use>
+              </svg>
+              <span>Solicitudes de afiliación</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="#view-solicitudes-sucursal"
+              class="nav-link"
+              data-target="view-solicitudes-sucursal"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-bell"></use>
+              </svg>
+              <span>Solicitudes de sucursal</span>
+              <span class="nav-badge" id="badge-sol-sucursal" hidden>0</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="#view-agencias"
+              class="nav-link"
+              data-target="view-agencias"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-building"></use>
+              </svg>
+              <span>Gestión de agencias</span>
+            </a>
+          </li>
+          <li>
+            <a href="#view-cortes" class="nav-link" data-target="view-cortes">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-box"></use>
+              </svg>
+              <span>Contenedores y cortes</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <button type="button" id="logout-btn" class="btn-logout">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-logout"></use>
+          </svg>
+          Cerrar sesión
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <h2 id="page-title">Resumen general</h2>
+        <div class="header-actions">
+          <div class="agency-selector-wrapper">
+            <label for="agency-switcher" class="selector-label"
+              >Vista activa</label
+            >
+            <div class="select-wrap">
+              <select id="agency-switcher" class="form-select">
+                <option value="global">Administrador global (todas)</option>
+              </select>
+              <svg class="icon select-wrap__icon" aria-hidden="true">
+                <use href="#i-chevron"></use>
+              </svg>
+            </div>
+          </div>
+          <div class="user-info">
+            <span class="avatar" id="admin-avatar" aria-hidden="true">AD</span>
+            <span id="admin-user-info">Admin</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="context-banner" id="agency-banner" role="status" hidden>
+        <span>
+          Estás dentro de la agencia
+          <strong id="agency-banner-name"></strong> como administrador.
+        </span>
+        <button type="button" class="btn-secondary btn-sm" id="exit-agency-btn">
+          <svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg>
+          Volver al panel de administrador
+        </button>
+      </div>
+
+      <div class="content-body">
+        <!-- RESUMEN GENERAL -->
+        <section
+          id="view-resumen"
+          class="dashboard-view"
+          aria-labelledby="page-title"
+        >
+          <div class="grid-stats grid-stats--6">
+            <article class="stat-card stat-card--metric">
+              <div class="stat-card__top">
+                <h3>Agencias activas</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-building"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-agencias">0</div>
+            </article>
+            <article class="stat-card stat-card--metric stat-card--dark">
+              <div class="stat-card__top">
+                <h3>Solicitudes pendientes</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-inbox"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-solicitudes">0</div>
+            </article>
+            <article class="stat-card stat-card--metric">
+              <div class="stat-card__top">
+                <h3>Contenedores abiertos</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-box"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-cortes">0</div>
+            </article>
+            <article class="stat-card stat-card--metric">
+              <div class="stat-card__top">
+                <h3>Bultos en red</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-package"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-bultos">0</div>
+            </article>
+            <article class="stat-card stat-card--metric">
+              <div class="stat-card__top">
+                <h3>Ingresos (30 días)</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-dollar"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-ingresos-30">$0.00</div>
+            </article>
+            <article class="stat-card stat-card--metric">
+              <div class="stat-card__top">
+                <h3>Saldo por cobrar</h3>
+                <span class="stat-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-trend"></use>
+                  </svg>
+                </span>
+              </div>
+              <div class="value" id="stat-saldo-cobrar">$0.00</div>
+            </article>
+          </div>
+
+          <div class="dashboard-row">
+            <article class="stat-card dashboard-chart-card">
+              <div class="card-toolbar">
+                <div>
+                  <h3 class="card-title">Ingresos últimos 30 días</h3>
+                  <p class="card-desc">Suma de costo de contenedores por día</p>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="chart-ingresos-30" height="220"></canvas>
+              </div>
+            </article>
+
+            <article class="stat-card dashboard-rank-card">
+              <div class="card-toolbar">
+                <div>
+                  <h3 class="card-title">Top 5 agencias</h3>
+                  <p class="card-desc">Mayor movimiento (costo generado)</p>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table data-table--compact">
+                  <thead>
+                    <tr>
+                      <th scope="col">#</th>
+                      <th scope="col">Agencia</th>
+                      <th scope="col">Cortes</th>
+                      <th scope="col">Costo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tabla-ranking-agencias">
+                    <tr class="empty-row">
+                      <td colspan="4">Cargando ranking...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+          <div class="dashboard-row">
+            <article class="stat-card">
+              <div class="card-toolbar">
+                <div>
+                  <h3 class="card-title">Contenedores por estado</h3>
+                  <p class="card-desc">Distribución actual en la red</p>
+                </div>
+              </div>
+              <div id="estados-contenedores" class="status-bars">
+                <div class="status-bar-row">
+                  <span class="status-bar-label">Pendiente</span>
+                  <div class="status-bar-track">
+                    <div
+                      class="status-bar-fill status-bar-fill--warning"
+                      id="bar-pendiente"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                  <span class="status-bar-value" id="count-pendiente">0</span>
+                </div>
+                <div class="status-bar-row">
+                  <span class="status-bar-label">Recibido</span>
+                  <div class="status-bar-track">
+                    <div
+                      class="status-bar-fill status-bar-fill--info"
+                      id="bar-recibido"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                  <span class="status-bar-value" id="count-recibido">0</span>
+                </div>
+                <div class="status-bar-row">
+                  <span class="status-bar-label">Entregado</span>
+                  <div class="status-bar-track">
+                    <div
+                      class="status-bar-fill status-bar-fill--success"
+                      id="bar-entregado"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                  <span class="status-bar-value" id="count-entregado">0</span>
+                </div>
+                <div class="status-bar-row">
+                  <span class="status-bar-label">Pagado</span>
+                  <div class="status-bar-track">
+                    <div
+                      class="status-bar-fill status-bar-fill--primary"
+                      id="bar-pagado"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                  <span class="status-bar-value" id="count-pagado">0</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="stat-card">
+              <div class="card-toolbar">
+                <div>
+                  <h3 class="card-title">Actividad reciente</h3>
+                  <p class="card-desc">Últimos contenedores registrados</p>
+                </div>
+              </div>
+              <ul id="lista-actividad-reciente" class="activity-list">
+                <li class="empty-msg">Cargando actividad...</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <!-- Solicitudes de afiliación -->
+        <section
+          id="view-solicitudes"
+          class="dashboard-view"
+          aria-label="Solicitudes de afiliación"
+          hidden
+        >
+          <article class="stat-card">
+            <h3 class="card-title">Solicitudes de nuevas agencias</h3>
+            <p class="card-desc">
+              Revisa las solicitudes enviadas por emprendedores para afiliarse a
+              tu red.
+            </p>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Negocio</th>
+                    <th scope="col">Contacto</th>
+                    <th scope="col">Correo</th>
+                    <th scope="col">Departamento</th>
+                    <th scope="col">Referencia</th>
+                    <th scope="col">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="solicitudes-table-body">
+                  <tr class="empty-row">
+                    <td colspan="6">Cargando solicitudes...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- SOLICITUDES DE SUCURSAL (consolidador / inspección / velocidad) -->
+        <section
+          id="view-solicitudes-sucursal"
+          class="dashboard-view"
+          aria-label="Solicitudes de sucursal"
+          hidden
+        >
+          <article class="stat-card">
+            <div class="card-toolbar">
+              <div>
+                <h3 class="card-title">Solicitudes de sucursal</h3>
+                <p class="card-desc">
+                  Consolidador, inspección y cambio de velocidad enviados por
+                  las agencias. Da seguimiento y responde aquí.
+                </p>
+              </div>
+            </div>
+
+            <div class="btn-row btn-row--wrap" style="margin-bottom: 1rem">
+              <div class="form-field" style="min-width: 10rem; margin: 0">
+                <label class="form-label" for="filtro-sol-estado">Estado</label>
+                <div class="select-wrap">
+                  <select id="filtro-sol-estado" class="form-input">
+                    <option value="">Todos</option>
+                    <option value="pendiente" selected>Pendiente</option>
+                    <option value="en_proceso">En proceso</option>
+                    <option value="resuelto">Resuelto</option>
+                    <option value="rechazado">Rechazado</option>
+                  </select>
+                  <svg class="icon select-wrap__icon" aria-hidden="true">
+                    <use href="#i-chevron"></use>
+                  </svg>
+                </div>
+              </div>
+              <div class="form-field" style="min-width: 11rem; margin: 0">
+                <label class="form-label" for="filtro-sol-tipo">Tipo</label>
+                <div class="select-wrap">
+                  <select id="filtro-sol-tipo" class="form-input">
+                    <option value="">Todos</option>
+                    <option value="Consolidador">Consolidador</option>
+                    <option value="Inspeccionar">Inspeccionar</option>
+                    <option value="Cambio de Velocidad">
+                      Cambio de velocidad
+                    </option>
+                  </select>
+                  <svg class="icon select-wrap__icon" aria-hidden="true">
+                    <use href="#i-chevron"></use>
+                  </svg>
+                </div>
+              </div>
+              <div
+                class="form-field"
+                style="flex: 1; min-width: 12rem; margin: 0"
+              >
+                <label class="form-label" for="filtro-sol-buscar">Buscar</label>
+                <input
+                  type="search"
+                  id="filtro-sol-buscar"
+                  class="form-input"
+                  placeholder="Cliente, tracking o agencia..."
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Fecha</th>
+                    <th scope="col">Agencia</th>
+                    <th scope="col">Tipo</th>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Tracking</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-solicitudes-sucursal-body">
+                  <tr class="empty-row">
+                    <td colspan="7">Cargando solicitudes de sucursal...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section
+          id="view-agencias"
+          class="dashboard-view"
+          aria-label="Gestión de agencias"
+          hidden
+        >
+          <article class="stat-card">
+            <h3 class="card-title">Agencias registradas en la red</h3>
+            <p class="card-desc">
+              Consulta datos, tarifas asignadas o suspende y reactiva el acceso.
+            </p>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Código</th>
+                    <th scope="col">Agencia</th>
+                    <th scope="col">Contacto / Teléfono</th>
+                    <th scope="col">Correo</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="agencias-table-body">
+                  <tr class="empty-row">
+                    <td colspan="6">Cargando agencias...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section
+          id="view-cortes"
+          class="dashboard-view"
+          aria-label="Contenedores y cortes"
+          hidden
+        >
+          <article class="stat-card">
+            <h3 class="card-title">Crear nuevo contenedor / corte de envíos</h3>
+            <p class="card-desc">
+              Abre un corte por agencia y vía. El costo total se calcula
+              automáticamente sumando cada bulto (libras × tarifa de la
+              agencia).
+            </p>
+            <form id="form-admin-crear-corte" class="form-grid">
+              <div class="form-field">
+                <label class="form-label" for="corte-agencia-select"
+                  >Agencia *</label
+                >
+                <div class="select-wrap">
+                  <select id="corte-agencia-select" class="form-input" required>
+                    <option value="">Cargando agencias...</option>
+                  </select>
+                  <svg class="icon select-wrap__icon" aria-hidden="true">
+                    <use href="#i-chevron"></use>
+                  </svg>
+                </div>
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="corte-tipo-envio"
+                  >Tipo de envío *</label
+                >
+                <div class="select-wrap">
+                  <select id="corte-tipo-envio" class="form-input" required>
+                    <option value="Aéreo">Aéreo</option>
+                    <option value="Marítimo">Marítimo</option>
+                    <option value="Ultra">Ultra carga</option>
+                  </select>
+                  <svg class="icon select-wrap__icon" aria-hidden="true">
+                    <use href="#i-chevron"></use>
+                  </svg>
+                </div>
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="corte-numero-val"
+                  >Número de corte / contenedor *</label
+                >
+                <input
+                  type="text"
+                  id="corte-numero-val"
+                  class="form-input"
+                  maxlength="20"
+                  placeholder="Ej. 1005"
+                  required
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="corte-fecha-val"
+                  >Fecha de corte *</label
+                >
+                <input
+                  type="date"
+                  id="corte-fecha-val"
+                  class="form-input"
+                  required
+                />
+              </div>
+              <div class="form-field form-field--action">
+                <button
+                  type="submit"
+                  class="btn-primary btn-block"
+                  id="crear-corte-btn"
+                >
+                  Crear y asignar contenedor
+                </button>
+              </div>
+            </form>
+          </article>
+          <article class="stat-card">
+            <h3 class="card-title" id="cortes-title">
+              Contenedores de todas las agencias
+            </h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Agencia destino</th>
+                    <th scope="col">Tipo</th>
+                    <th scope="col">Corte / referencia</th>
+                    <th scope="col">Fecha de corte</th>
+                    <th scope="col">Costo total</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-admin-cortes-body">
+                  <tr class="empty-row">
+                    <td colspan="7">Cargando cortes...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </div>
+
+      <!-- Modal: responder solicitud de sucursal -->
+      <div id="modal-responder-sol-sucursal" class="modal-overlay" hidden>
+        <div
+          class="modal-card modal-card--lg"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sol-suc-title"
+        >
+          <div class="modal-header modal-header--row">
+            <div>
+              <h3 id="sol-suc-title">Detalle de solicitud</h3>
+              <p class="modal-subtext" id="sol-suc-subtitle">—</p>
+            </div>
+            <button
+              type="button"
+              class="icon-btn"
+              data-cerrar
+              aria-label="Cerrar"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close"></use>
+              </svg>
+            </button>
+          </div>
+
+          <input type="hidden" id="sol-suc-id" />
+
+          <dl class="detail-list" style="margin-bottom: 1rem">
+            <div>
+              <dt>Agencia</dt>
+              <dd id="sol-suc-agencia">—</dd>
+            </div>
+            <div>
+              <dt>Tipo</dt>
+              <dd id="sol-suc-tipo">—</dd>
+            </div>
+            <div>
+              <dt>Cliente</dt>
+              <dd id="sol-suc-cliente">—</dd>
+            </div>
+            <div>
+              <dt>Tracking</dt>
+              <dd id="sol-suc-tracking">—</dd>
+            </div>
+            <div>
+              <dt>Detalle</dt>
+              <dd id="sol-suc-detalle">—</dd>
+            </div>
+            <div>
+              <dt>Fecha</dt>
+              <dd id="sol-suc-fecha">—</dd>
+            </div>
+            <div>
+              <dt>Estado actual</dt>
+              <dd id="sol-suc-estado-actual">—</dd>
+            </div>
+          </dl>
+
+          <div id="sol-suc-meta-box" class="subpanel" hidden>
+            <h4 class="subpanel__title">Datos adicionales</h4>
+            <pre
+              id="sol-suc-meta"
+              class="hint"
+              style="white-space: pre-wrap; margin: 0"
+            ></pre>
+          </div>
+
+          <form id="form-responder-sol-sucursal">
+            <div class="form-field">
+              <label class="form-label" for="sol-suc-nuevo-estado"
+                >Actualizar estado *</label
+              >
+              <div class="select-wrap">
+                <select id="sol-suc-nuevo-estado" class="form-input" required>
+                  <option value="pendiente">Pendiente</option>
+                  <option value="en_proceso">En proceso</option>
+                  <option value="resuelto">Resuelto</option>
+                  <option value="rechazado">Rechazado</option>
+                </select>
+                <svg class="icon select-wrap__icon" aria-hidden="true">
+                  <use href="#i-chevron"></use>
+                </svg>
+              </div>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="sol-suc-respuesta"
+                >Respuesta / nota para la agencia</label
+              >
+              <textarea
+                id="sol-suc-respuesta"
+                class="form-input"
+                rows="3"
+                maxlength="1000"
+                placeholder="Ej. Inspección realizada. Contenido verificado sin novedad."
+              ></textarea>
+            </div>
+            <div class="form-field">
+              <span class="form-label" id="sol-suc-foto-label"
+                >Evidencia / foto (opcional, útil en inspección)</span
+              >
+              <div class="file-upload-wrapper">
+                <label for="sol-suc-foto-input" class="file-upload-btn">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-upload"></use>
+                  </svg>
+                  Subir imagen
+                </label>
+                <span id="sol-suc-foto-filename" class="file-chosen-text"
+                  >Ningún archivo seleccionado</span
+                >
+                <input
+                  type="file"
+                  id="sol-suc-foto-input"
+                  accept="image/png,image/jpeg,image/webp"
+                  class="file-input"
+                  aria-labelledby="sol-suc-foto-label"
+                />
+              </div>
+              <div id="sol-suc-imagen-actual" hidden style="margin-top: 8px">
+                <a
+                  id="sol-suc-imagen-link"
+                  href="#"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="hint"
+                  >Ver imagen actual</a
+                >
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button
+                type="submit"
+                class="btn-primary"
+                id="btn-guardar-sol-suc"
+              >
+                Guardar respuesta
+              </button>
+              <button type="button" class="btn-secondary" data-cerrar>
+                Cerrar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modales existentes (aprobación, credenciales, etc.) -->
+      <div id="approval-modal" class="modal-overlay" hidden>
+        <div
+          class="modal-card modal-card--lg"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="approval-title"
+        >
+          <div class="modal-header">
+            <h3 id="approval-title">Aprobar solicitud y crear agencia</h3>
+            <p id="modal-subtitle" class="modal-subtext"></p>
+          </div>
+          <form id="approval-form">
+            <input type="hidden" id="app-solicitud-id" />
+            <div class="form-grid form-grid--2">
+              <div class="form-field">
+                <label class="form-label" for="app-codigo"
+                  >Código único de agencia *</label
+                >
+                <input
+                  type="text"
+                  id="app-codigo"
+                  class="form-input"
+                  maxlength="20"
+                  required
+                  placeholder="Ej. MGA-01"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="app-nombre-agencia"
+                  >Nombre oficial de la agencia *</label
+                >
+                <input
+                  type="text"
+                  id="app-nombre-agencia"
+                  class="form-input"
+                  maxlength="120"
+                  required
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="app-contacto"
+                  >Nombre del contacto</label
+                >
+                <input
+                  type="text"
+                  id="app-contacto"
+                  class="form-input"
+                  readonly
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="app-telefono"
+                  >Teléfono / WhatsApp</label
+                >
+                <input
+                  type="text"
+                  id="app-telefono"
+                  class="form-input"
+                  readonly
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="app-correo"
+                  >Correo de acceso</label
+                >
+                <input
+                  type="email"
+                  id="app-correo"
+                  class="form-input"
+                  readonly
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="app-departamento"
+                  >Departamento / ciudad</label
+                >
+                <input
+                  type="text"
+                  id="app-departamento"
+                  class="form-input"
+                  maxlength="80"
+                  placeholder="Ej. Granada, Managua..."
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="app-password"
+                  >Contraseña asignada *</label
+                >
+                <div class="input-group">
+                  <input
+                    type="password"
+                    id="app-password"
+                    class="form-input"
+                    minlength="8"
+                    maxlength="72"
+                    required
+                    autocomplete="new-password"
+                    placeholder="Mínimo 8 caracteres"
+                  />
+                  <button
+                    type="button"
+                    class="input-group__btn"
+                    id="toggle-password-btn"
+                    aria-label="Mostrar contraseña"
+                    aria-pressed="false"
+                  >
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-eye"></use>
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="input-group__btn"
+                    id="generate-password-btn"
+                    aria-label="Generar contraseña segura"
+                    title="Generar contraseña segura"
+                  >
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-key"></use>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="form-field form-field--full">
+                <label class="form-label" for="app-direccion"
+                  >Dirección física de la agencia</label
+                >
+                <input
+                  type="text"
+                  id="app-direccion"
+                  class="form-input"
+                  maxlength="250"
+                  placeholder="Ej. De los semáforos 2c al sur, Managua..."
+                />
+              </div>
+              <div class="form-field form-field--full">
+                <span class="form-label" id="logo-label"
+                  >Logo de la agencia (PNG, JPG o WEBP, máx. 2 MB)</span
+                >
+                <div class="file-upload-wrapper">
+                  <label for="app-logo-file" class="file-upload-btn">
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-upload"></use>
+                    </svg>
+                    Elegir archivo
+                  </label>
+                  <span id="file-chosen" class="file-chosen-text"
+                    >Ningún archivo seleccionado</span
+                  >
+                  <input
+                    type="file"
+                    id="app-logo-file"
+                    accept="image/png,image/jpeg,image/webp"
+                    class="file-input"
+                    aria-labelledby="logo-label"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="subpanel" style="margin-top: var(--space-5)">
+              <h4 class="subpanel__title">Tarifas asignadas ($ / libra) *</h4>
+              <div
+                class="form-grid form-grid--2"
+                style="grid-template-columns: repeat(3, minmax(0, 1fr))"
+              >
+                <div class="form-field">
+                  <label class="form-label" for="app-tarifa-aereo"
+                    >Aéreo *</label
+                  >
+                  <input
+                    type="number"
+                    id="app-tarifa-aereo"
+                    class="form-input"
+                    min="0"
+                    max="9999"
+                    step="0.01"
+                    required
+                    value="5.50"
+                    placeholder="5.50"
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="app-tarifa-maritimo"
+                    >Marítimo *</label
+                  >
+                  <input
+                    type="number"
+                    id="app-tarifa-maritimo"
+                    class="form-input"
+                    min="0"
+                    max="9999"
+                    step="0.01"
+                    required
+                    value="2.50"
+                    placeholder="2.50"
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="app-tarifa-ultra"
+                    >Ultra carga *</label
+                  >
+                  <input
+                    type="number"
+                    id="app-tarifa-ultra"
+                    class="form-input"
+                    min="0"
+                    max="9999"
+                    step="0.01"
+                    required
+                    value="4.00"
+                    placeholder="4.00"
+                  />
+                </div>
+              </div>
+              <p class="hint">
+                Estas tarifas se usan al calcular el costo de cada bulto (peso ×
+                tarifa según la vía del corte).
+              </p>
+            </div>
+
+            <p class="hint">
+              Contacto, teléfono y correo vienen de la solicitud. Puedes
+              completar departamento, dirección y tarifas antes de aprobar.
+            </p>
+            <div class="modal-actions">
+              <button
+                type="submit"
+                class="btn-primary"
+                id="confirm-approval-btn"
+              >
+                Crear agencia y aprobar
+              </button>
+              <button
+                type="button"
+                class="btn-secondary"
+                id="close-modal-btn"
+                data-cerrar
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div id="modal-credenciales" class="modal-overlay" hidden>
+        <div
+          class="modal-card modal-card--md"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cred-title"
+        >
+          <div class="modal-header modal-header--center">
+            <span class="modal-icon modal-icon--success">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-check"></use>
+              </svg>
+            </span>
+            <h3 id="cred-title">Agencia aprobada con éxito</h3>
+            <p class="modal-subtext">
+              Entrega estos datos al socio comercial. La contraseña no se vuelve
+              a mostrar.
+            </p>
+          </div>
+          <dl class="detail-list">
+            <div>
+              <dt>Agencia</dt>
+              <dd id="cred-nombre-agencia">--</dd>
+            </div>
+            <div>
+              <dt>Usuario / correo</dt>
+              <dd id="cred-usuario">--</dd>
+            </div>
+            <div>
+              <dt>Contraseña temporal</dt>
+              <dd class="mono" id="cred-password">--</dd>
+            </div>
+          </dl>
+          <p class="hint" id="cred-aviso"></p>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-secondary"
+              id="copiar-credenciales-btn"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-copy"></use>
+              </svg>
+              Copiar credenciales
+            </button>
+            <button
+              type="button"
+              class="btn-primary"
+              id="cerrar-modal-credenciales"
+              data-cerrar
+            >
+              Entendido, cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="modal-detalle-agencia" class="modal-overlay" hidden>
+        <div
+          class="modal-card modal-card--md"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="det-title"
+        >
+          <div class="modal-header">
+            <h3 id="det-title">Perfil y datos de la agencia</h3>
+            <p class="modal-subtext">
+              Información de registro y tarifas. Las contraseñas no se
+              almacenan.
+            </p>
+          </div>
+          <div class="agency-profile-logo" id="det-logo-wrap" hidden>
+            <img
+              id="det-logo"
+              class="agency-logo-lg"
+              alt="Logo de la agencia"
+            />
+          </div>
+          <dl class="detail-list">
+            <div>
+              <dt>Negocio</dt>
+              <dd id="det-nombre">--</dd>
+            </div>
+            <div>
+              <dt>Código único</dt>
+              <dd id="det-codigo">--</dd>
+            </div>
+            <div>
+              <dt>Contacto</dt>
+              <dd id="det-contacto">--</dd>
+            </div>
+            <div>
+              <dt>Teléfono / WhatsApp</dt>
+              <dd id="det-telefono">--</dd>
+            </div>
+            <div>
+              <dt>Departamento</dt>
+              <dd id="det-departamento">--</dd>
+            </div>
+            <div>
+              <dt>Dirección</dt>
+              <dd id="det-direccion">--</dd>
+            </div>
+            <div>
+              <dt>Correo de acceso</dt>
+              <dd id="det-correo">--</dd>
+            </div>
+            <div>
+              <dt>Estado</dt>
+              <dd id="det-estado">--</dd>
+            </div>
+            <div>
+              <dt>Tarifa aéreo ($/lb)</dt>
+              <dd id="det-tarifa-aereo">--</dd>
+            </div>
+            <div>
+              <dt>Tarifa marítimo ($/lb)</dt>
+              <dd id="det-tarifa-maritimo">--</dd>
+            </div>
+            <div>
+              <dt>Tarifa ultra ($/lb)</dt>
+              <dd id="det-tarifa-ultra">--</dd>
+            </div>
+          </dl>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-secondary btn-block"
+              id="cerrar-modal-detalle"
+              data-cerrar
+            >
+              Cerrar ventana
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="reject-modal" class="modal-overlay" hidden>
+        <div
+          class="modal-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reject-title"
+        >
+          <div class="modal-header">
+            <h3 id="reject-title" class="text-danger">
+              Rechazar solicitud de afiliación
+            </h3>
+            <p id="reject-modal-subtitle" class="modal-subtext"></p>
+          </div>
+          <form id="reject-form">
+            <input type="hidden" id="rej-solicitud-id" />
+            <div class="form-field">
+              <label class="form-label" for="rej-motivo"
+                >Motivo de rechazo *</label
+              >
+              <textarea
+                id="rej-motivo"
+                class="form-input"
+                rows="4"
+                maxlength="500"
+                required
+                placeholder="Explica por qué no fue aprobada la solicitud..."
+              ></textarea>
+            </div>
+            <div class="modal-actions">
+              <button
+                type="submit"
+                class="btn-danger-solid"
+                id="confirm-reject-btn"
+              >
+                Confirmar rechazo
+              </button>
+              <button
+                type="button"
+                class="btn-secondary"
+                id="close-reject-modal-btn"
+                data-cerrar
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div id="modal-gestionar-bultos" class="modal-overlay" hidden>
+        <div
+          class="modal-card modal-card--xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mg-corte-titulo"
+        >
+          <div class="modal-header modal-header--row">
+            <div>
+              <h3 id="mg-corte-titulo">Bultos del contenedor</h3>
+              <p id="mg-corte-sub" class="modal-subtext">Agencia: --</p>
+            </div>
+            <button
+              type="button"
+              class="icon-btn"
+              id="cerrar-mg-bultos"
+              aria-label="Cerrar"
+              data-cerrar
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close"></use>
+              </svg>
+            </button>
+          </div>
+
+          <div class="subpanel" id="mg-tarifa-info" style="margin-top: 0">
+            <div
+              class="form-grid"
+              style="
+                grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+                gap: var(--space-3);
+              "
+            >
+              <div>
+                <span class="cell-muted">Vía del corte</span>
+                <strong id="mg-via-envio" style="display: block">--</strong>
+              </div>
+              <div>
+                <span class="cell-muted">Tarifa agencia</span>
+                <strong id="mg-tarifa-lb" style="display: block"
+                  >$0.00 / lb</strong
+                >
+              </div>
+              <div>
+                <span class="cell-muted">Bultos</span>
+                <strong id="mg-count-bultos" style="display: block">0</strong>
+              </div>
+              <div>
+                <span class="cell-muted">Costo total del corte</span>
+                <strong
+                  id="mg-total-corte"
+                  style="display: block; color: var(--color-navy)"
+                  >$0.00</strong
+                >
+              </div>
+            </div>
+            <p
+              class="hint"
+              style="margin-top: var(--space-3); margin-bottom: 0"
+            >
+              El costo de cada paquete = peso (lbs) × tarifa de la vía. El total
+              del contenedor es la suma de todos los bultos.
+            </p>
+          </div>
+
+          <section class="subpanel" aria-labelledby="bulto-form-title">
+            <h4 class="subpanel__title" id="bulto-form-title">
+              Agregar nuevo bulto
+            </h4>
+            <form id="form-agregar-bulto" class="form-grid">
+              <input type="hidden" id="mg-corte-id" />
+              <input type="hidden" id="mg-agencia-id" />
+              <input type="hidden" id="mg-tarifa-valor" value="0" />
+
+              <div class="form-field">
+                <label class="form-label" for="bulto-cliente-select"
+                  >Cliente *</label
+                >
+                <div class="select-wrap">
+                  <select id="bulto-cliente-select" class="form-input" required>
+                    <option value="">Cargando clientes...</option>
+                  </select>
+                  <svg class="icon select-wrap__icon" aria-hidden="true">
+                    <use href="#i-chevron"></use>
+                  </svg>
+                </div>
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="bulto-tracking"
+                  >Número de tracking *</label
+                >
+                <input
+                  type="text"
+                  id="bulto-tracking"
+                  class="form-input"
+                  maxlength="60"
+                  required
+                  placeholder="Ej. 1Z9999..."
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="bulto-peso"
+                  >Peso (libras) *</label
+                >
+                <input
+                  type="number"
+                  id="bulto-peso"
+                  class="form-input"
+                  min="0.01"
+                  max="9999"
+                  step="0.01"
+                  required
+                  placeholder="0.00"
+                />
+              </div>
+              <div class="form-field">
+                <label class="form-label" for="bulto-costo"
+                  >Costo calculado ($)</label
+                >
+                <input
+                  type="number"
+                  id="bulto-costo"
+                  class="form-input"
+                  min="0"
+                  max="9999999"
+                  step="0.01"
+                  placeholder="0.00"
+                  title="Se calcula con peso × tarifa. Puedes ajustarlo manualmente."
+                />
+                <span class="hint" id="bulto-costo-hint"
+                  >peso × tarifa de la vía</span
+                >
+              </div>
+              <div class="form-field form-field--full">
+                <span class="form-label" id="foto-label"
+                  >Foto del paquete (opcional)</span
+                >
+                <div class="file-upload-wrapper">
+                  <label for="bulto-foto-input" class="file-upload-btn">
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-upload"></use>
+                    </svg>
+                    Examinar foto
+                  </label>
+                  <span id="bulto-foto-filename" class="file-chosen-text"
+                    >Ningún archivo seleccionado</span
+                  >
+                  <input
+                    type="file"
+                    id="bulto-foto-input"
+                    accept="image/png,image/jpeg,image/webp"
+                    class="file-input"
+                    aria-labelledby="foto-label"
+                  />
+                </div>
+              </div>
+              <div class="form-field form-field--full form-field--end">
+                <button
+                  type="submit"
+                  class="btn-primary"
+                  id="guardar-bulto-btn"
+                >
+                  Guardar bulto en el contenedor
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section aria-labelledby="bultos-list-title">
+            <h4 class="subpanel__title" id="bultos-list-title">
+              Bultos registrados
+            </h4>
+            <div class="table-responsive table-responsive--scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Foto</th>
+                    <th scope="col">Tracking</th>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Peso</th>
+                    <th scope="col">Tarifa</th>
+                    <th scope="col">Costo</th>
+                    <th scope="col">Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-gestion-bultos-body">
+                  <tr class="empty-row">
+                    <td colspan="7">
+                      Selecciona un contenedor para ver sus bultos.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div id="modal-foto" class="modal-overlay modal-overlay--top" hidden>
+        <div
+          class="modal-card modal-card--md"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Foto del bulto"
+        >
+          <div class="modal-header modal-header--row">
+            <h3>Foto del bulto</h3>
+            <button
+              type="button"
+              class="icon-btn"
+              aria-label="Cerrar"
+              data-cerrar
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close"></use>
+              </svg>
+            </button>
+          </div>
+          <img id="foto-ampliada" class="photo-large" alt="Foto del bulto" />
+        </div>
+      </div>
+
+      <div
+        id="custom-alert-modal"
+        class="modal-overlay modal-overlay--top"
+        hidden
+      >
+        <div
+          class="modal-card modal-card--sm"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="custom-alert-title"
+          aria-describedby="custom-alert-message"
+        >
+          <div class="modal-header modal-header--center">
+            <span class="modal-icon modal-icon--info" id="custom-alert-icon">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-info"></use>
+              </svg>
+            </span>
+            <h3 id="custom-alert-title">Notificación</h3>
+            <p id="custom-alert-message" class="modal-subtext">Mensaje</p>
+          </div>
+          <button
+            type="button"
+            class="btn-primary btn-block"
+            id="custom-alert-btn"
+            data-cerrar
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
+
+      <div
+        id="custom-confirm-modal"
+        class="modal-overlay modal-overlay--top"
+        hidden
+      >
+        <div
+          class="modal-card modal-card--sm"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="custom-confirm-title"
+          aria-describedby="custom-confirm-message"
+        >
+          <div class="modal-header modal-header--center">
+            <span class="modal-icon modal-icon--warning">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-alert"></use>
+              </svg>
+            </span>
+            <h3 id="custom-confirm-title">Confirmación</h3>
+            <p id="custom-confirm-message" class="modal-subtext">
+              ¿Estás seguro de realizar esta acción?
+            </p>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-primary" id="custom-confirm-yes">
+              Sí, continuar
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              id="custom-confirm-no"
+              data-cerrar
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="dashboard-admin.js"></script>
+  </body>
+</html>

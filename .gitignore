@@ -1,0 +1,15 @@
+﻿node_modules/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+**/config.js
+**/src/core/js/config.js
+mandala-web/src/core/js/config.js
+
+.supabase/
+dist/
+.vercel/
+.netlify/
