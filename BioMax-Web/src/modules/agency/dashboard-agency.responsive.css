@@ -1,0 +1,276 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.dashboard-view {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dashboard-view > *,
+.dashboard-row > *,
+.grid-stats > *,
+.grid-cards > *,
+.form-grid > *,
+.activity-list > *,
+.content-body,
+.main-content {
+  min-width: 0;
+}
+
+.dashboard-row {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
+.dashboard-row--equal {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+@media (max-width: 900px) {
+  .dashboard-row,
+  .dashboard-row--equal {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.grid-cards {
+  grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
+}
+
+.corte-card,
+.activity-list {
+  overflow-wrap: anywhere;
+}
+
+.table-responsive {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.chart-wrap canvas {
+  max-width: 100%;
+}
+
+.file-upload-wrapper {
+  position: relative;
+}
+
+.file-chosen-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-icon--warning {
+  background: var(--color-warning-bg, #fef3c7);
+  color: var(--color-warning-text, #b45309);
+}
+
+@media (max-width: 56rem) {
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  .main-content {
+    overflow: visible;
+  }
+
+  .sidebar-brand {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .sidebar-brand-row > div {
+    min-width: 0;
+  }
+
+  .sidebar-logo {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  #agencia-nombre-sidebar {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sidebar-nav {
+    flex: 1 1 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sidebar-menu > li {
+    flex: none;
+  }
+
+  .btn-logout {
+    width: auto;
+  }
+
+  .header-actions {
+    flex-wrap: nowrap;
+  }
+
+  #btn-historial-solicitudes {
+    flex: none;
+  }
+
+  .user-info {
+    min-width: 0;
+    max-width: 60%;
+  }
+
+  .avatar {
+    flex: none;
+  }
+
+  #agencia-user-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .content-body {
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .card-toolbar > .btn-primary {
+    width: 100%;
+  }
+
+  .btn-row--sm > * {
+    flex: 1 1 auto;
+  }
+
+  .table-responsive {
+    max-height: 65vh;
+    max-height: 65dvh;
+    overflow: auto;
+  }
+
+  .table-responsive--scroll {
+    max-height: 16rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    white-space: nowrap;
+  }
+
+  .data-table .empty-row td {
+    text-align: left;
+    white-space: normal;
+  }
+
+  .data-table .actions-cell {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  td.actions-cell {
+    display: table-cell;
+  }
+
+  .chart-wrap {
+    height: 220px;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid-stats--6,
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-input {
+    font-size: 1rem;
+    min-height: 2.75rem;
+  }
+
+  textarea.form-input {
+    min-height: 5rem;
+  }
+
+  .form-field--end {
+    justify-items: stretch;
+  }
+
+  .form-field--end .btn-primary {
+    width: 100%;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    min-height: 2.75rem;
+  }
+
+  .data-table .btn-sm,
+  .btn-row--sm .btn-sm {
+    min-height: 2.25rem;
+  }
+
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-overlay:not(.modal-overlay--top) .modal-card {
+    max-width: 100%;
+  }
+
+  .modal-card {
+    max-height: 92vh;
+    max-height: 92dvh;
+    padding: var(--space-5);
+    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .modal-overlay--top {
+    align-items: center;
+    padding: var(--space-3);
+  }
+
+  .modal-overlay--top .modal-card {
+    border-radius: var(--radius-xl);
+  }
+
+  .historial-lista {
+    max-height: 55vh;
+    max-height: 55dvh;
+  }
+
+  #foto-bulto-preview {
+    max-height: 65vh !important;
+    max-height: 65dvh !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .detail-list > div {
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .detail-list dd {
+    text-align: left;
+  }
+
+  .cost-summary__row {
+    align-items: flex-start !important;
+  }
+}

@@ -11,6 +11,36 @@ let chartCostosAgencia = null;
 let cortesTarjetasCache = [];
 let bultosPorCorteCache = {};
 
+// ========== NUEVO: Estados de seguimiento (igual que Admin) ==========
+const ESTADO_ENVIO_OPTIONS = [
+  { value: "despachado_miami", label: "Despachado a Almacén Miami" },
+  { value: "transito_managua", label: "Tránsito a Managua" },
+  { value: "recibido_managua", label: "Recibido Almacén Managua" },
+  { value: "entregado", label: "Entregado" },
+];
+
+function textoEstadoEnvio(val) {
+  const k = String(val || "despachado_miami")
+    .toLowerCase()
+    .trim();
+  const found = ESTADO_ENVIO_OPTIONS.find((o) => o.value === k);
+  return found ? found.label : val || "—";
+}
+
+function badgeEstadoEnvio(val) {
+  const label = textoEstadoEnvio(val);
+  const k = String(val || "")
+    .toLowerCase()
+    .trim();
+  let cls = "badge-warning";
+  if (k === "entregado") cls = "badge-success";
+  else if (k === "recibido_managua") cls = "badge-info";
+  else if (k === "transito_managua") cls = "badge-info";
+  else if (k === "despachado_miami") cls = "badge-warning";
+  return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
+}
+// ===================================================================
+
 function $(id) {
   return document.getElementById(id);
 }
@@ -785,7 +815,7 @@ async function cargarContenedoresDeSucursal(agenciaId) {
     .order("created_at", { ascending: false });
 
   if (error || !cortes || cortes.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">No hay contenedores asignados a tu sucursal.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">No hay contenedores asignados a tu sucursal.</td></tr>`;
     return;
   }
 
@@ -797,6 +827,7 @@ async function cargarContenedoresDeSucursal(agenciaId) {
       <td><strong>Corte ${escapeHtml(c.numero_corte || "N/D")}</strong></td>
       <td>${escapeHtml(fechaCorteTexto(c))}</td>
       <td>${badgeHtml(c.estado || "Pendiente")}</td>
+      <td>${badgeEstadoEnvio(c.estado_envio)}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -848,6 +879,10 @@ function renderGridCortes(cortes) {
   grid.innerHTML = "";
   cortes.forEach((c) => {
     const bultos = bultosPorCorteCache[String(c.id)] || [];
+    const totalLbs = bultos.reduce(
+      (s, b) => s + (parseFloat(b.peso_lbs) || 0),
+      0,
+    );
     const costo = parseFloat(c.costo_total || 0).toFixed(2);
     const card = document.createElement("article");
     card.className = "stat-card corte-card";
@@ -857,8 +892,11 @@ function renderGridCortes(cortes) {
         <strong>${escapeHtml((c.tipo_envio || "Envío").toUpperCase())} · Corte ${escapeHtml(c.numero_corte || "N/D")}</strong>
         ${badgeHtml(c.estado || "Pendiente")}
       </div>
-      <p class="cell-muted" style="margin-bottom:6px">Fecha de corte: ${escapeHtml(fechaCorteTexto(c))}</p>
-      <p class="cell-muted" style="margin-bottom:8px">${bultos.length} bulto(s)</p>
+      <p class="cell-muted" style="margin-bottom:4px">Fecha de corte: ${escapeHtml(fechaCorteTexto(c))}</p>
+      <p class="cell-muted" style="margin-bottom:4px">${bultos.length} bulto(s) · ${totalLbs.toFixed(2)} lbs aprox</p>
+      <div style="margin-bottom:8px">
+        ${badgeEstadoEnvio(c.estado_envio)}
+      </div>
       <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--color-border);padding-top:8px">
         <span style="font-size:12px;color:var(--color-text-muted)">Total</span>
         <span style="font-size:13px;font-weight:bold;color:var(--color-navy)">$${costo}</span>
@@ -917,7 +955,7 @@ function actualizarResumenCostosModal(corte, bultos) {
     $("saldo-pagar-val").textContent = formatMoney(saldo);
   if ($("desglose-bultos-text")) {
     $("desglose-bultos-text").textContent =
-      `${corte?.tipo_envio || "Envío"}: ${(bultos || []).length} bultos, ${totalLbs.toFixed(2)} lbs · Costo: ${formatMoney(costo)}`;
+      `${corte?.tipo_envio || "Envío"}: ${(bultos || []).length} bultos · ${totalLbs.toFixed(2)} lbs aprox · Costo: ${formatMoney(costo)}`;
   }
   actualizarBotonRecibido(corte);
 }
@@ -946,13 +984,24 @@ function abrirModalBultosAgente(corte, bultos) {
   const modal = $("modal-detalle-corte-bultos");
   if (!modal) return;
 
+  const totalLbs = (bultos || []).reduce(
+    (s, b) => s + (parseFloat(b.peso_lbs) || 0),
+    0,
+  );
+
   if ($("bulto-modal-titulo")) {
     $("bulto-modal-titulo").textContent =
       `Bultos · ${(corte.tipo_envio || "Envío").toUpperCase()} · Corte ${corte.numero_corte || "N/D"}`;
   }
   if ($("bulto-modal-sub")) {
     $("bulto-modal-sub").textContent =
-      `Fecha de corte: ${fechaCorteTexto(corte)} · Bultos: ${(bultos || []).length}`;
+      `Fecha de corte: ${fechaCorteTexto(corte)} · Bultos: ${(bultos || []).length} · ${totalLbs.toFixed(2)} lbs aprox`;
+  }
+
+  // NUEVO: Mostrar estado de seguimiento en el modal
+  const badgeEl = $("estado-seguimiento-badge");
+  if (badgeEl) {
+    badgeEl.innerHTML = badgeEstadoEnvio(corte.estado_envio);
   }
 
   actualizarResumenCostosModal(corte, bultos);

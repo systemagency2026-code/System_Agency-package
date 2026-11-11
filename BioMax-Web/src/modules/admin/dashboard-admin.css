@@ -65,6 +65,7 @@ body {
 .sidebar-nav {
   flex-grow: 1;
   padding: var(--space-4);
+  overflow-y: auto;
 }
 
 .sidebar-menu {
@@ -150,6 +151,7 @@ body {
   font-weight: var(--weight-bold);
   letter-spacing: -0.01em;
   color: var(--color-text);
+  margin: 0;
 }
 
 .header-actions {
@@ -282,6 +284,7 @@ body {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   color: var(--color-text-muted);
+  margin: 0;
 }
 
 .stat-icon {
@@ -331,6 +334,7 @@ body {
   overflow-x: auto;
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
+  -webkit-overflow-scrolling: touch;
 }
 
 .table-responsive--scroll {
@@ -412,13 +416,14 @@ body {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
+  padding: 0.25rem 0.65rem;
   border-radius: var(--radius-pill);
   background: var(--color-bg);
-  font-size: var(--text-xs);
+  font-size: 0.7rem;
   font-weight: var(--weight-semibold);
   color: var(--color-text);
   white-space: nowrap;
+  line-height: 1.3;
 }
 
 .badge::before {
@@ -443,6 +448,117 @@ body {
   --badge-dot: var(--color-warning-dot);
   background: var(--color-warning-bg);
   color: var(--color-warning-text);
+}
+
+.badge-info {
+  --badge-dot: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* Seguimiento físico (estado_envio) */
+.badge-envio {
+  --badge-dot: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.7rem;
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  background: #f1f5f9;
+  color: #334155;
+  line-height: 1.3;
+}
+
+.badge-envio::before {
+  content: "";
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: var(--radius-pill);
+  background: var(--badge-dot);
+}
+
+.badge-envio--despachado_miami {
+  --badge-dot: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.badge-envio--transito_managua {
+  --badge-dot: #f59e0b;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.badge-envio--recibido_managua {
+  --badge-dot: #8b5cf6;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.badge-envio--entregado {
+  --badge-dot: #16a34a;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+/* Select de seguimiento en tabla admin */
+.select-estado-envio {
+  min-width: 11rem;
+  max-width: 15rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+  border-width: 1px;
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.select-estado-envio:hover {
+  border-color: var(--color-text-subtle);
+}
+
+.select-estado-envio:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.select-estado-envio[data-estado="despachado_miami"],
+.select-estado-envio.estado-despachado_miami {
+  border-left-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.select-estado-envio[data-estado="transito_managua"],
+.select-estado-envio.estado-transito_managua {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.select-estado-envio[data-estado="recibido_managua"],
+.select-estado-envio.estado-recibido_managua {
+  border-left-color: #8b5cf6;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.select-estado-envio[data-estado="entregado"],
+.select-estado-envio.estado-entregado {
+  border-left-color: #16a34a;
+  background: #dcfce7;
+  color: #15803d;
 }
 
 /* Formularios */
@@ -982,6 +1098,7 @@ textarea.form-input {
   object-fit: contain;
   border-radius: var(--radius-md);
 }
+
 .agency-profile-logo {
   display: flex;
   justify-content: center;
@@ -995,126 +1112,6 @@ textarea.form-input {
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
-}
-
-/* Responsive */
-@media (max-width: 56rem) {
-  body {
-    flex-direction: column;
-    height: auto;
-    min-height: 100vh;
-    overflow: auto;
-  }
-
-  .sidebar {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    width: 100%;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-4);
-  }
-
-  .sidebar-brand {
-    padding: 0;
-    border-bottom: 0;
-  }
-
-  .sidebar-badge {
-    display: none;
-  }
-
-  .sidebar-nav {
-    flex: 1 1 100%;
-    order: 3;
-    padding: 0;
-    overflow-x: auto;
-  }
-
-  .sidebar-menu {
-    display: flex;
-    gap: var(--space-2);
-  }
-
-  .nav-link {
-    white-space: nowrap;
-  }
-
-  .sidebar-footer {
-    margin-left: auto;
-    padding: 0;
-    border-top: 0;
-  }
-
-  .main-content {
-    overflow: visible;
-  }
-
-  .top-header {
-    position: static;
-    flex-wrap: wrap;
-    padding: var(--space-3) var(--space-4);
-  }
-
-  .header-actions,
-  .agency-selector-wrapper {
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
-  .form-select {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .content-body {
-    padding: var(--space-4);
-  }
-
-  .context-banner {
-    padding-inline: var(--space-4);
-  }
-
-  .form-grid--2 {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .actions-cell {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-view,
-  .modal-card {
-    animation: none;
-  }
-
-  .stat-card--metric,
-  .btn-primary,
-  .btn-danger-solid {
-    transition: none;
-  }
-
-  .stat-card--metric:hover,
-  .btn-primary:hover:not(:disabled),
-  .btn-danger-solid:hover:not(:disabled) {
-    transform: none;
-  }
-}
-
-@supports not (
-  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
-) {
-  .top-header {
-    background: var(--color-surface);
-  }
-
-  .modal-overlay {
-    background: var(--color-sidebar-bg);
-    opacity: 0.94;
-  }
 }
 
 /* DASHBOARD ADMIN SPECIFIC STYLES */
@@ -1235,4 +1232,338 @@ textarea.form-input {
 .data-table--compact td {
   padding: 0.5rem 0.65rem;
   font-size: var(--text-sm);
+}
+
+/* =========================================================
+   RESPONSIVE COMPLETO PARA TELÉFONOS
+   ========================================================= */
+
+@media (max-width: 56rem) {
+  body {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  .sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    width: 100%;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .sidebar-brand {
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .sidebar-badge {
+    display: none;
+  }
+
+  .sidebar-nav {
+    flex: 1 1 100%;
+    order: 3;
+    padding: 0;
+    overflow-x: auto;
+  }
+
+  .sidebar-menu {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .nav-link {
+    white-space: nowrap;
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8rem;
+  }
+
+  .sidebar-footer {
+    margin-left: auto;
+    padding: 0;
+    border-top: 0;
+  }
+
+  .btn-logout {
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8rem;
+  }
+
+  .main-content {
+    overflow: visible;
+  }
+
+  .top-header {
+    position: static;
+    flex-wrap: wrap;
+    padding: var(--space-3) var(--space-4);
+    min-height: auto;
+    gap: var(--space-3);
+  }
+
+  .top-header h2 {
+    font-size: var(--text-lg);
+  }
+
+  .header-actions,
+  .agency-selector-wrapper {
+    flex-wrap: wrap;
+    width: 100%;
+    gap: var(--space-2);
+  }
+
+  .form-select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .content-body {
+    padding: var(--space-4);
+  }
+
+  .context-banner {
+    padding-inline: var(--space-4);
+  }
+
+  .form-grid--2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions-cell {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .select-estado-envio {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .grid-stats--6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Teléfonos pequeños */
+@media (max-width: 640px) {
+  .grid-stats--6 {
+    grid-template-columns: 1fr;
+  }
+
+  .content-body {
+    padding: var(--space-3);
+  }
+
+  .stat-card {
+    padding: var(--space-4);
+  }
+
+  .stat-card .value {
+    font-size: 1.5rem;
+  }
+
+  .modal-overlay {
+    padding: var(--space-2);
+    align-items: flex-end;
+  }
+
+  .modal-card {
+    max-height: 92vh;
+    padding: var(--space-5);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .modal-card--lg,
+  .modal-card--xl {
+    max-width: 100%;
+  }
+
+  .modal-header h3 {
+    font-size: var(--text-lg);
+  }
+
+  .modal-subtext {
+    font-size: 0.8rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8rem;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-danger-solid {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions > * {
+    flex: none;
+    width: 100%;
+  }
+
+  .status-bar-row {
+    grid-template-columns: 4.5rem 1fr 1.75rem;
+    gap: var(--space-2);
+    font-size: 0.8rem;
+  }
+
+  .activity-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .activity-item__meta {
+    align-items: flex-start;
+    flex-direction: row;
+    gap: var(--space-2);
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-header {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .content-body {
+    padding: var(--space-2);
+  }
+
+  .stat-card {
+    padding: var(--space-3);
+  }
+
+  .card-title {
+    font-size: var(--text-base);
+  }
+
+  .select-estado-envio {
+    font-size: 10px;
+    padding: 0.3rem 0.4rem;
+  }
+
+  .badge,
+  .badge-envio {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+  }
+}
+
+/* Preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-view,
+  .modal-card {
+    animation: none;
+  }
+
+  .stat-card--metric,
+  .btn-primary,
+  .btn-danger-solid {
+    transition: none;
+  }
+
+  .stat-card--metric:hover,
+  .btn-primary:hover:not(:disabled),
+  .btn-danger-solid:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .top-header {
+    background: var(--color-surface);
+  }
+
+  .modal-overlay {
+    background: var(--color-sidebar-bg);
+    opacity: 0.94;
+  }
+}
+
+/* ========== FIX CONTENEDORES - FORMULARIO + TABLA CON SCROLL ========== */
+
+/* Mejor espaciado entre label e input */
+#view-cortes .form-field {
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+#view-cortes .form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
+  gap: 1.25rem 1.5rem;
+  align-items: end;
+}
+
+/* El botón se queda abajo pero con ancho normal (no estirado) */
+#view-cortes .form-field--action {
+  grid-column: 1 / -1;
+  margin-top: 0.75rem;
+  justify-items: start; /* ← esto evita que se estire */
+}
+
+#view-cortes .form-field--action .btn-primary {
+  width: auto;
+  min-width: 14rem;
+  max-width: 20rem;
+}
+
+/* Solo la tabla tiene scroll */
+#view-cortes .table-responsive {
+  max-height: min(58vh, 500px);
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#view-cortes .table-responsive .data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-surface);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  #view-cortes .form-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 560px) {
+  #view-cortes .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  #view-cortes .form-field--action {
+    justify-items: stretch;
+  }
+
+  #view-cortes .form-field--action .btn-primary {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  #view-cortes .table-responsive {
+    max-height: 50vh;
+  }
 }

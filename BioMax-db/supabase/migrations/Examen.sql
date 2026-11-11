@@ -1,16 +1,9 @@
--- =====================================================================
--- Pruebas de aislamiento y seguridad (M0–M2)
--- Cómo leerlo: el script SIEMPRE termina con un mensaje de error.
---   · "PRUEBAS OK: N comprobaciones superadas"  -> todo correcto.
---   · "FALLO: ..."                              -> algo está mal (dice qué).
--- Termina en error a propósito: así PostgreSQL deshace todos los datos de
--- prueba (usuarios, agencias, etc.) y no queda nada en tu base.
--- =====================================================================
+
 do $$
 declare
   v_admin uuid := gen_random_uuid();
-  v_ua    uuid := gen_random_uuid();   -- agente de la agencia A
-  v_ub    uuid := gen_random_uuid();   -- agente de la agencia B
+  v_ua    uuid := gen_random_uuid();
+  v_ub    uuid := gen_random_uuid();
   v_ag_a  uuid;
   v_ag_b  uuid;
   v_sol   uuid;
@@ -19,7 +12,6 @@ declare
   v_fallo boolean;
   v_txt   text;
 begin
-  -- ===== Datos de prueba (como propietario) ==========================
   insert into auth.users (id, email) values
     (v_admin, 'admin.test@example.invalid'),
     (v_ua,    'agente.a.test@example.invalid'),
@@ -31,7 +23,6 @@ begin
     (v_ua,    v_ag_a, 'agente', 'Agente A'),
     (v_ub,    v_ag_b, 'agente', 'Agente B');
 
-  -- ===== 1. Usuario anónimo ==========================================
   set local role anon;
 
   begin perform 1 from public.agencias;
@@ -50,12 +41,10 @@ begin
     raise exception 'FALLO: anon pudo leer solicitudes de afiliacion';
   exception when insufficient_privilege then v_ok := v_ok + 1; end;
 
-  -- Solicitud válida: permitida
   insert into public.solicitudes_afiliacion (nombre_negocio, nombre_contacto, correo)
   values ('Negocio Test', 'Contacto Test', 'solicitud.test@example.invalid');
   v_ok := v_ok + 1;
 
-  -- Campos del formulario completo (departamento y referencia)
   insert into public.solicitudes_afiliacion (nombre_negocio, nombre_contacto, correo, departamento, codigo_referencia)
   values ('Negocio Dos', 'Contacto Dos', 'completa.test@example.invalid', 'Managua', 'REF-001');
   v_ok := v_ok + 1;
@@ -73,14 +62,12 @@ begin
     raise exception 'FALLO: anon pudo insertar una solicitud ya aprobada';
   exception when insufficient_privilege then v_ok := v_ok + 1; end;
 
-  -- No puede duplicar una solicitud pendiente del mismo correo
   begin
     insert into public.solicitudes_afiliacion (nombre_negocio, nombre_contacto, correo)
     values ('Negocio Test', 'Contacto Test', 'SOLICITUD.test@example.invalid');
     raise exception 'FALLO: anon pudo duplicar una solicitud pendiente';
   exception when unique_violation then v_ok := v_ok + 1; end;
 
-  -- Validación de formato en la base de datos
   begin
     insert into public.solicitudes_afiliacion (nombre_negocio, nombre_contacto, correo)
     values ('Negocio', 'Contacto', 'esto-no-es-un-correo');
@@ -90,7 +77,6 @@ begin
   reset role;
   select id into v_sol from public.solicitudes_afiliacion where correo = 'solicitud.test@example.invalid';
 
-  -- ===== 2. Agente de la agencia A ===================================
   perform set_config('request.jwt.claim.sub', v_ua::text, true);
   perform set_config('request.jwt.claims', json_build_object('sub', v_ua, 'role', 'authenticated')::text, true);
   set local role authenticated;
@@ -136,7 +122,6 @@ begin
   select rol::text into v_txt from public.perfiles where id = v_ua;
   if v_txt <> 'agente' then raise exception 'FALLO: el rol del agente A cambió'; end if;
 
-  -- ===== 3. Suspensión corta el acceso al instante ====================
   update public.agencias set estado = 'suspendida' where id = v_ag_a;
   set local role authenticated;
   select count(*) into v_n from public.agencias;
@@ -153,7 +138,6 @@ begin
   reset role;
   update public.perfiles set activo = true where id = v_ua;
 
-  -- ===== 4. Administrador =============================================
   perform set_config('request.jwt.claim.sub', v_admin::text, true);
   perform set_config('request.jwt.claims', json_build_object('sub', v_admin, 'role', 'authenticated')::text, true);
   set local role authenticated;
@@ -166,20 +150,17 @@ begin
   if v_n = 0 then raise exception 'FALLO: el admin no ve registros de auditoria'; end if;
   v_ok := v_ok + 1;
 
-  -- Aprobar sin agencia: rechazado por la base de datos
   begin
     update public.solicitudes_afiliacion set estado = 'aprobada' where id = v_sol;
     raise exception 'FALLO: se aprobó una solicitud sin agencia asociada';
   exception when check_violation then v_ok := v_ok + 1; end;
 
-  -- Aprobar correctamente
   update public.solicitudes_afiliacion set estado = 'aprobada', agencia_id = v_ag_b where id = v_sol;
   select (revisada_por = v_admin and revisada_en is not null) into v_fallo
     from public.solicitudes_afiliacion where id = v_sol;
   if not v_fallo then raise exception 'FALLO: el revisor o la fecha no se registraron'; end if;
   v_ok := v_ok + 1;
 
-  -- Una solicitud resuelta no se puede volver a modificar
   v_fallo := false;
   begin
     update public.solicitudes_afiliacion set estado = 'rechazada', motivo_rechazo = 'x', agencia_id = null where id = v_sol;
@@ -188,7 +169,6 @@ begin
   if v_fallo then raise exception 'FALLO: se modificó una solicitud ya resuelta'; end if;
   v_ok := v_ok + 1;
 
-  -- Ni el admin puede editar o borrar la auditoría desde la API
   begin
     update public.auditoria set accion = 'INSERT';
     raise exception 'FALLO: el admin pudo editar la auditoria';
@@ -200,7 +180,6 @@ begin
 
   reset role;
 
-  -- ===== 5. Reglas de integridad (como propietario) ===================
   v_fallo := false;
   begin delete from public.auditoria; v_fallo := true;
   exception when raise_exception then null; end;
@@ -226,7 +205,6 @@ begin
     raise exception 'FALLO: se aceptó un código de agencia repetido';
   exception when unique_violation then v_ok := v_ok + 1; end;
 
-  -- ===== Resultado ====================================================
   raise exception 'PRUEBAS OK: % comprobaciones superadas (los datos de prueba se deshacen solos)', v_ok;
 end;
 $$;

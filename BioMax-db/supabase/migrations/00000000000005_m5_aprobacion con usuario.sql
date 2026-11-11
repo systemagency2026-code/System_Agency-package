@@ -1,12 +1,4 @@
--- =====================================================================
--- M5 · Aprobar una afiliación creando también el usuario de acceso
--- La Edge Function "afiliaciones" crea primero el usuario en Supabase Auth
--- (requiere service_role) y luego llama a esta función, que en UNA transacción:
--- crea la agencia, crea el perfil del usuario y cierra la solicitud.
--- Solo el servidor (service_role) puede ejecutarla; el navegador no.
--- =====================================================================
 
--- Logo de la agencia (URL pública del archivo ya subido al almacenamiento)
 alter table public.agencias add column logo_url text;
 alter table public.agencias
   add constraint ck_agencias_logo check (logo_url is null or (char_length(logo_url) <= 500 and logo_url ~ '^https://'));
@@ -27,11 +19,9 @@ declare
   v_sol     public.solicitudes_afiliacion;
   v_agencia uuid;
 begin
-  -- Se actúa EN NOMBRE del administrador: los triggers y la auditoría registran su identidad.
   perform set_config('request.jwt.claim.sub', p_admin_id::text, true);
   perform set_config('request.jwt.claims', json_build_object('sub', p_admin_id, 'role', 'authenticated')::text, true);
 
-  -- Defensa en profundidad: aunque solo service_role puede llamar, p_admin_id debe ser un admin activo real.
   if not private.es_admin() then
     raise exception 'No tienes permiso para esta operación' using errcode = '42501';
   end if;

@@ -1,4 +1,3 @@
-// ...existing code...
 {
   "editor.formatOnSave": true,
   "editor.tabSize": 2,
@@ -8,4 +7,3 @@
   "liveServer.settings.port": 5500,
   "deno.enable": true
 }
-// ...existing code...

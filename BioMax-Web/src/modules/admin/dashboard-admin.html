@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="../../core/styles/global/reset.css" />
     <link rel="stylesheet" href="../../core/styles/global/base.css" />
     <link rel="stylesheet" href="dashboard-admin.css" />
+    <link rel="stylesheet" href="dashboard-admin.responsive.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   </head>
   <body>
@@ -658,14 +659,17 @@
                     <th scope="col">Tipo</th>
                     <th scope="col">Corte / referencia</th>
                     <th scope="col">Fecha de corte</th>
+                    <th scope="col">Nº bultos</th>
+                    <th scope="col">Libras aprox.</th>
                     <th scope="col">Costo total</th>
                     <th scope="col">Estado</th>
+                    <th scope="col">Seguimiento</th>
                     <th scope="col">Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="tabla-admin-cortes-body">
                   <tr class="empty-row">
-                    <td colspan="7">Cargando cortes...</td>
+                    <td colspan="10">Cargando cortes...</td>
                   </tr>
                 </tbody>
               </table>
@@ -1299,6 +1303,12 @@
               <div>
                 <span class="cell-muted">Bultos</span>
                 <strong id="mg-count-bultos" style="display: block">0</strong>
+              </div>
+              <div>
+                <span class="cell-muted">Libras aprox.</span>
+                <strong id="mg-total-libras" style="display: block"
+                  >0.00 lb</strong
+                >
               </div>
               <div>
                 <span class="cell-muted">Costo total del corte</span>

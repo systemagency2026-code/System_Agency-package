@@ -1,8 +1,3 @@
--- =====================================================================
--- M1 · Identidad: agencias, perfiles y solicitudes de afiliación
--- Incluye RLS desde el primer momento.
--- Reglas CONFIRMADAS: ninguna aún. Todo lo de aquí es PROPUESTO.
--- =====================================================================
 
 -- ---------- Tablas ----------------------------------------------------
 
@@ -24,8 +19,6 @@ create table public.agencias (
 );
 create unique index ux_agencias_codigo on public.agencias (codigo);
 
--- Un perfil por cada usuario de Supabase Auth (las contraseñas viven en auth.users,
--- nunca en nuestras tablas). Se desactiva, no se borra: protege el historial.
 create table public.perfiles (
   id             uuid primary key references auth.users (id) on delete restrict,
   agencia_id     uuid references public.agencias (id) on delete restrict,
@@ -37,7 +30,6 @@ create table public.perfiles (
   actualizado_en timestamptz not null default now(),
   constraint ck_perfiles_nombre   check (char_length(btrim(nombre)) between 2 and 120),
   constraint ck_perfiles_telefono check (telefono is null or char_length(telefono) <= 30),
-  -- El admin no pertenece a ninguna agencia; todo agente pertenece a una.
   constraint ck_perfiles_rol_agencia check (
     (rol = 'admin'  and agencia_id is null) or
     (rol = 'agente' and agencia_id is not null)
@@ -45,8 +37,6 @@ create table public.perfiles (
 );
 create index ix_perfiles_agencia on public.perfiles (agencia_id);
 
--- Solicitud pública de afiliación. NO guarda contraseña: al aprobarla se
--- invitará a la persona por correo para que cree la suya.
 create table public.solicitudes_afiliacion (
   id              uuid primary key default gen_random_uuid(),
   nombre_negocio  text not null,
@@ -68,22 +58,15 @@ create table public.solicitudes_afiliacion (
   constraint ck_afil_direccion check (direccion is null or char_length(direccion) <= 300),
   constraint ck_afil_mensaje  check (mensaje   is null or char_length(mensaje)   <= 1000),
   constraint ck_afil_motivo   check (motivo_rechazo is null or char_length(motivo_rechazo) <= 500),
-  -- Coherencia entre estado y datos de revisión
   constraint ck_afil_coherencia check (
     (estado = 'pendiente' and revisada_en is null and agencia_id is null and motivo_rechazo is null)
     or (estado = 'aprobada'  and revisada_en is not null and agencia_id is not null)
     or (estado = 'rechazada' and revisada_en is not null and agencia_id is null and motivo_rechazo is not null)
   )
 );
--- Una sola solicitud pendiente por correo (frena duplicados y spam trivial)
 create unique index ux_afil_pendiente_correo
   on public.solicitudes_afiliacion (lower(correo)) where estado = 'pendiente';
 create index ix_afil_estado on public.solicitudes_afiliacion (estado, creada_en desc);
-
--- ---------- Funciones de seguridad (esquema privado) -----------------
--- SECURITY DEFINER: leen "perfiles" sin disparar RLS (evita recursión) y
--- devuelven NULL/false si el usuario o su agencia están inactivos o
--- suspendidos. Así, suspender corta el acceso aunque el token siga vigente.
 
 create function private.es_admin()
 returns boolean
@@ -120,8 +103,6 @@ create trigger trg_agencias_updated before update on public.agencias
 create trigger trg_perfiles_updated before update on public.perfiles
   for each row execute function private.set_updated_at();
 
--- Una solicitud resuelta no se vuelve a tocar; el revisor y la fecha los
--- pone el servidor, no el cliente.
 create function private.validar_afiliacion()
 returns trigger
 language plpgsql
@@ -145,13 +126,10 @@ revoke all on function private.validar_afiliacion() from public;
 create trigger trg_afil_validar before update on public.solicitudes_afiliacion
   for each row execute function private.validar_afiliacion();
 
--- ---------- Permisos (GRANT) -----------------------------------------
--- Sin DELETE para nadie: el historial no se borra desde la API.
 
 grant select, insert, update on public.agencias to authenticated;
-grant select, update         on public.perfiles to authenticated;  -- INSERT solo vía service_role (Edge Function)
+grant select, update         on public.perfiles to authenticated;
 
--- El anónimo solo puede INSERTAR estas columnas; no puede fijar estado ni revisión.
 grant insert (nombre_negocio, nombre_contacto, correo, telefono, direccion, mensaje)
   on public.solicitudes_afiliacion to anon;
 grant select on public.solicitudes_afiliacion to authenticated;

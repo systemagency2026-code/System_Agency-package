@@ -22,6 +22,32 @@ const TARIFA_DEFAULT = {
   ultra: 4.0,
 };
 
+const ESTADO_ENVIO_OPTIONS = [
+  { value: "despachado_miami", label: "Despachado a Almacén Miami" },
+  { value: "transito_managua", label: "Tránsito a Managua" },
+  { value: "recibido_managua", label: "Recibido Almacén Managua" },
+  { value: "entregado", label: "Entregado" },
+];
+
+function textoEstadoEnvio(val) {
+  const k = String(val || "despachado_miami")
+    .toLowerCase()
+    .trim();
+  const found = ESTADO_ENVIO_OPTIONS.find((o) => o.value === k);
+  return found ? found.label : val || "—";
+}
+
+function selectEstadoEnvioHtml(corteId, valorActual) {
+  const actual = String(valorActual || "despachado_miami")
+    .toLowerCase()
+    .trim();
+  const opts = ESTADO_ENVIO_OPTIONS.map((o) => {
+    const sel = o.value === actual ? " selected" : "";
+    return `<option value="${o.value}"${sel}>${o.label}</option>`;
+  }).join("");
+  return `<select class="form-input select-estado-envio" data-id="${escapeHtml(String(corteId))}" data-estado="${escapeHtml(actual)}">${opts}</select>`;
+}
+
 let agenciasCache = [];
 let vistaSeleccionadaAnterior = "global";
 let cortesCache = [];
@@ -32,10 +58,7 @@ let solicitudesSucursalCache = [];
 
 // Rol de sesión (admin | operador)
 let rolUsuario = "operador";
-const VISTAS_OPERADOR = new Set([
-  "view-cortes",
-  "view-solicitudes-sucursal",
-]);
+const VISTAS_OPERADOR = new Set(["view-cortes", "view-solicitudes-sucursal"]);
 
 async function cargarPerfilSesion() {
   const {
@@ -112,9 +135,7 @@ function aplicarPermisosPorRol(rol) {
 
   const badge = document.querySelector(".sidebar-badge");
   if (badge) {
-    badge.textContent = esOperador
-      ? "OPERACIONES"
-      : "ADMINISTRACIÓN GLOBAL";
+    badge.textContent = esOperador ? "OPERACIONES" : "ADMINISTRACIÓN GLOBAL";
   }
 
   if (esOperador) {
@@ -132,7 +153,6 @@ function aplicarPermisosPorRol(rol) {
     if (pageTitle) pageTitle.textContent = "Contenedores y cortes";
   }
 }
-
 
 function $(id) {
   return document.getElementById(id);
@@ -276,23 +296,28 @@ function fechaCorteKey(corte) {
     corte?.creada_en ||
     null;
   if (!raw) return null;
+  const s = String(raw).trim();
+  // Fecha calendario YYYY-MM-DD sin pasar por UTC (evita -1 día)
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
   try {
-    const d = new Date(raw);
-    if (Number.isNaN(d.getTime())) return String(raw).slice(0, 10);
-    return d.toISOString().slice(0, 10);
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return s.slice(0, 10);
+    const y = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, "0");
+    const da = String(d.getDate()).padStart(2, "0");
+    return `${y}-${mo}-${da}`;
   } catch {
-    return String(raw).slice(0, 10);
+    return s.slice(0, 10);
   }
 }
 
 function fechaCorteTexto(corte) {
   const key = fechaCorteKey(corte);
   if (!key) return "Pendiente";
-  try {
-    return new Date(key).toLocaleDateString("es-NI");
-  } catch {
-    return key;
-  }
+  const m = String(key).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return key;
 }
 
 function mostrarAlerta(titulo, mensaje) {
@@ -466,6 +491,7 @@ async function cargarDashboardResumen() {
       return e === "pendiente" || e === "recibido" || e === "abierto";
     }).length;
 
+    // ========== RANGO DE FECHAS (últimos 30 días + fechas futuras si existen) ==========
     const ahora = new Date();
     const hace30 = new Date(ahora);
     hace30.setDate(hace30.getDate() - 29);
@@ -474,10 +500,15 @@ async function cargarDashboardResumen() {
     let ingresos30 = 0;
     let saldoCobrar = 0;
     const porDia = {};
+
+    // Generamos las 30 fechas en hora local
     for (let i = 0; i < 30; i++) {
       const d = new Date(hace30);
       d.setDate(hace30.getDate() + i);
-      porDia[d.toISOString().slice(0, 10)] = 0;
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      porDia[`${y}-${m}-${day}`] = 0;
     }
 
     const porAgencia = {};
@@ -488,14 +519,22 @@ async function cargarDashboardResumen() {
       saldoCobrar += Math.max(0, costo - pagado);
 
       const key = fechaCorteKey(c);
-      if (key && porDia[key] !== undefined) {
+
+      if (key) {
+        // Si la fecha no está en el rango de 30 días, la agregamos igual
+        if (porDia[key] === undefined) {
+          porDia[key] = 0;
+        }
         porDia[key] += costo;
-        ingresos30 += costo;
-      } else if (key) {
-        const fd = new Date(key);
-        if (fd >= hace30 && fd <= ahora) {
+
+        // Sumamos a ingresos30 si está dentro de los últimos 30 días o es futura cercana
+        try {
+          const fd = new Date(key + "T12:00:00");
+          if (!Number.isNaN(fd.getTime()) && fd >= hace30) {
+            ingresos30 += costo;
+          }
+        } catch {
           ingresos30 += costo;
-          if (porDia[key] !== undefined) porDia[key] += costo;
         }
       }
 
@@ -507,6 +546,7 @@ async function cargarDashboardResumen() {
       porAgencia[aid].costo += costo;
     });
 
+    // Actualizar tarjetas
     if ($("stat-agencias"))
       $("stat-agencias").textContent = String(agenciasActivas);
     if ($("stat-solicitudes"))
@@ -519,8 +559,10 @@ async function cargarDashboardResumen() {
     if ($("stat-saldo-cobrar"))
       $("stat-saldo-cobrar").textContent = formatMoney(saldoCobrar);
 
+    // Ordenar las fechas y renderizar el gráfico
     const labels = Object.keys(porDia).sort();
     const values = labels.map((k) => porDia[k]);
+
     renderChartIngresos(
       labels.map((k) => {
         const parts = k.split("-");
@@ -1062,7 +1104,6 @@ async function cargarCortesGlobalesAdmin() {
   let cortes = null;
   let error = null;
 
-  // Probar columnas de fecha que pueden existir en tu esquema
   for (const col of ["fecha_corte", "created_at", "creada_en"]) {
     const res = await fetchCortes(col);
     if (!res.error) {
@@ -1079,7 +1120,6 @@ async function cargarCortesGlobalesAdmin() {
     break;
   }
 
-  // Último recurso: sin ORDER BY
   if (error || cortes == null) {
     let query = supabase.from("cortes_contenedores").select("*");
     if (agVista) query = query.eq("agencia_id", agVista.id);
@@ -1089,18 +1129,17 @@ async function cargarCortesGlobalesAdmin() {
   }
 
   if (error) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">Error: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="10">Error: ${escapeHtml(error.message)}</td></tr>`;
     return;
   }
 
   cortesCache = cortes || [];
 
   if (!cortes || cortes.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">No hay contenedores.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="10">No hay contenedores.</td></tr>`;
     return;
   }
 
-  // Orden en cliente (no depende de columnas del servidor)
   cortes.sort((a, b) => {
     const da = new Date(
       a.fecha_corte || a.created_at || a.creada_en || 0,
@@ -1111,9 +1150,25 @@ async function cargarCortesGlobalesAdmin() {
     return db - da;
   });
 
+  const ids = cortes.map((c) => c.id).filter(Boolean);
+  const statsMap = {};
+  if (ids.length > 0) {
+    const { data: bultosRows } = await supabase
+      .from("paquetes_bultos")
+      .select("corte_id, peso_lbs")
+      .in("corte_id", ids);
+    (bultosRows || []).forEach((b) => {
+      const k = String(b.corte_id);
+      if (!statsMap[k]) statsMap[k] = { n: 0, lbs: 0 };
+      statsMap[k].n += 1;
+      statsMap[k].lbs += parseFloat(b.peso_lbs) || 0;
+    });
+  }
+
   tbody.innerHTML = "";
   cortes.forEach((c) => {
     const ag = agenciasCache.find((a) => String(a.id) === String(c.agencia_id));
+    const st = statsMap[String(c.id)] || { n: 0, lbs: 0 };
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${escapeHtml(ag?.nombre || c.agencia_id || "—")}</td>
@@ -1123,8 +1178,11 @@ async function cargarCortesGlobalesAdmin() {
         ${c.codigo_ref ? `<br><small class="cell-muted">#${escapeHtml(c.codigo_ref)}</small>` : ""}
       </td>
       <td>${escapeHtml(fechaCorteTexto(c))}</td>
+      <td><strong>${st.n}</strong></td>
+      <td>${st.lbs.toFixed(2)} lb</td>
       <td><strong>${formatMoney(c.costo_total)}</strong></td>
       <td>${badgeHtml(c.estado || "Pendiente")}</td>
+      <td>${selectEstadoEnvioHtml(c.id, c.estado_envio)}</td>
       <td>
         <div class="actions-cell">
           <button type="button" class="btn-secondary btn-sm btn-gestionar-bultos" data-id="${escapeHtml(String(c.id))}">Bultos</button>
@@ -1133,6 +1191,35 @@ async function cargarCortesGlobalesAdmin() {
       </td>
     `;
     tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll(".select-estado-envio").forEach((sel) => {
+    sel.addEventListener("change", async (e) => {
+      const id = e.target.getAttribute("data-id");
+      const nuevo = e.target.value;
+      const prev = e.target.dataset.prev || "despachado_miami";
+      const { error: upErr } = await supabase
+        .from("cortes_contenedores")
+        .update({ estado_envio: nuevo })
+        .eq("id", id);
+      if (upErr) {
+        e.target.value = prev;
+        await mostrarAlerta(
+          "Error",
+          "No se pudo actualizar el seguimiento: " + upErr.message,
+        );
+        return;
+      }
+      e.target.dataset.prev = nuevo;
+      e.target.setAttribute("data-estado", nuevo);
+      const corte = cortesCache.find((c) => String(c.id) === String(id));
+      if (corte) corte.estado_envio = nuevo;
+      await mostrarAlerta(
+        "Éxito",
+        "Seguimiento actualizado: " + textoEstadoEnvio(nuevo),
+      );
+    });
+    sel.dataset.prev = sel.value;
   });
 
   tbody.querySelectorAll(".btn-gestionar-bultos").forEach((btn) => {
@@ -1187,6 +1274,7 @@ function setupFormCrearCorte() {
         costo_total: 0,
         total_pagado: 0,
         estado: "Pendiente",
+        estado_envio: "despachado_miami",
       },
     ]);
 
@@ -1395,13 +1483,20 @@ async function cargarBultosDelCorte(corteId) {
   if (error || !bultos || bultos.length === 0) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="7">No hay bultos registrados en este contenedor.</td></tr>`;
     if ($("mg-count-bultos")) $("mg-count-bultos").textContent = "0";
+    if ($("mg-total-libras")) $("mg-total-libras").textContent = "0.00 lb";
     if ($("mg-total-corte")) $("mg-total-corte").textContent = "$0.00";
     return;
   }
 
   const total = bultos.reduce((s, b) => s + (parseFloat(b.costo) || 0), 0);
+  const totalLbs = bultos.reduce(
+    (s, b) => s + (parseFloat(b.peso_lbs) || 0),
+    0,
+  );
   if ($("mg-count-bultos"))
     $("mg-count-bultos").textContent = String(bultos.length);
+  if ($("mg-total-libras"))
+    $("mg-total-libras").textContent = `${totalLbs.toFixed(2)} lb`;
   if ($("mg-total-corte")) $("mg-total-corte").textContent = formatMoney(total);
 
   tbody.innerHTML = "";
