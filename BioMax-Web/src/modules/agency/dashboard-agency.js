@@ -13,6 +13,7 @@ let bultosPorCorteCache = {};
 
 // ========== NUEVO: Estados de seguimiento (igual que Admin) ==========
 const ESTADO_ENVIO_OPTIONS = [
+  { value: "consolidacion_miami", label: "En Consolidación Miami" },
   { value: "despachado_miami", label: "Despachado a Almacén Miami" },
   { value: "transito_managua", label: "Tránsito a Managua" },
   { value: "recibido_managua", label: "Recibido Almacén Managua" },
@@ -20,7 +21,7 @@ const ESTADO_ENVIO_OPTIONS = [
 ];
 
 function textoEstadoEnvio(val) {
-  const k = String(val || "despachado_miami")
+  const k = String(val || "consolidacion_miami")
     .toLowerCase()
     .trim();
   const found = ESTADO_ENVIO_OPTIONS.find((o) => o.value === k);
@@ -36,7 +37,7 @@ function badgeEstadoEnvio(val) {
   if (k === "entregado") cls = "badge-success";
   else if (k === "recibido_managua") cls = "badge-info";
   else if (k === "transito_managua") cls = "badge-info";
-  else if (k === "despachado_miami") cls = "badge-warning";
+  else if (k === "despachado_miami" || k === "consolidacion_miami") cls = "badge-warning";
   return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
 }
 // ===================================================================
