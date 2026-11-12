@@ -1352,7 +1352,7 @@ async function recalcularCostoTotalCorte(corteId) {
   }
 }
 
-async function cargarClientesDeAgenciaEnSelect(agenciaId) {
+async function cargarClientesDeAgenciaEnSelect(agenciaId, seleccionarId = null) {
   const select = $("bulto-cliente-select");
   if (!select) return;
   select.innerHTML = `<option value="">-- Seleccionar cliente --</option>`;
@@ -1376,10 +1376,69 @@ async function cargarClientesDeAgenciaEnSelect(agenciaId) {
     opt.value = cli.nombre_cliente || "Cliente";
     opt.textContent = `${cli.nombre_cliente || "Cliente"} (#CLI-${cli.id})`;
     select.appendChild(opt);
+    if (seleccionarId !== null && String(cli.id) === String(seleccionarId)) {
+      opt.selected = true;
+    }
+  });
+}
+
+function setupRegistroClienteDesdeBultos() {
+  const panel = $("panel-bulto-nuevo-cliente");
+  const boton = $("btn-bulto-nuevo-cliente");
+  const cerrar = () => {
+    if (panel) panel.hidden = true;
+    boton?.setAttribute("aria-expanded", "false");
+  };
+  boton?.addEventListener("click", async () => {
+    if (!$("mg-agencia-id")?.value) {
+      await mostrarAlerta("Atención", "Primero selecciona un contenedor con agencia asignada.");
+      return;
+    }
+    if (!panel) return;
+    panel.hidden = !panel.hidden;
+    boton.setAttribute("aria-expanded", String(!panel.hidden));
+    if (!panel.hidden) $("bcli-nombre")?.focus();
+  });
+  $("btn-cancelar-bulto-cliente")?.addEventListener("click", () => {
+    $("form-bulto-nuevo-cliente")?.reset();
+    cerrar();
+  });
+  $("form-bulto-nuevo-cliente")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const agenciaId = $("mg-agencia-id")?.value;
+    const nombre = $("bcli-nombre")?.value.trim();
+    const telefono = $("bcli-telefono")?.value.trim();
+    if (!agenciaId || !nombre || !telefono) {
+      await mostrarAlerta("Atención", "La agencia, el nombre y el teléfono son obligatorios.");
+      return;
+    }
+    const guardar = $("btn-guardar-bulto-cliente");
+    if (guardar) guardar.disabled = true;
+    try {
+      const { data, error } = await supabase.from("clientes_agencia").insert([{
+        agencia_id: agenciaId,
+        nombre_cliente: nombre,
+        telefono,
+        departamento: $("bcli-departamento")?.value.trim() || null,
+        direccion: $("bcli-direccion")?.value.trim() || null,
+        estado: "activo",
+      }]).select().single();
+      if (error) {
+        await mostrarAlerta("Error", "No se pudo registrar el cliente: " + error.message);
+        return;
+      }
+      await cargarClientesDeAgenciaEnSelect(agenciaId, data.id);
+      e.target.reset();
+      cerrar();
+      await mostrarAlerta("Éxito", `Cliente ${nombre} registrado (#CLI-${data.id}). Ya está seleccionado para este bulto.`);
+    } finally {
+      if (guardar) guardar.disabled = false;
+    }
   });
 }
 
 function setupFormBultos() {
+  setupRegistroClienteDesdeBultos();
   $("bulto-foto-input")?.addEventListener("change", (e) => {
     const file = e.target.files?.[0];
     const textSpan = $("bulto-foto-filename");

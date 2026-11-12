@@ -1332,6 +1332,20 @@
             <h4 class="subpanel__title" id="bulto-form-title">
               Agregar nuevo bulto
             </h4>
+            <div class="form-field" style="margin-bottom: var(--space-3)">
+              <button type="button" class="btn-secondary btn-sm" id="btn-bulto-nuevo-cliente" aria-expanded="false" aria-controls="panel-bulto-nuevo-cliente">+ Nuevo cliente</button>
+            </div>
+            <section id="panel-bulto-nuevo-cliente" class="subpanel" hidden aria-label="Registrar cliente para la agencia del contenedor" style="margin-bottom: var(--space-4)">
+              <h4 class="subpanel__title">Registrar cliente</h4>
+              <p class="hint">El cliente se asignará a la agencia de este contenedor.</p>
+              <form id="form-bulto-nuevo-cliente" class="form-grid">
+                <div class="form-field"><label class="form-label" for="bcli-nombre">Nombre completo *</label><input class="form-input" id="bcli-nombre" type="text" maxlength="120" autocomplete="name" required /></div>
+                <div class="form-field"><label class="form-label" for="bcli-telefono">Teléfono / WhatsApp *</label><input class="form-input" id="bcli-telefono" type="text" maxlength="30" autocomplete="tel" required /></div>
+                <div class="form-field"><label class="form-label" for="bcli-departamento">Ciudad / estado</label><input class="form-input" id="bcli-departamento" type="text" maxlength="80" /></div>
+                <div class="form-field"><label class="form-label" for="bcli-direccion">Dirección física</label><input class="form-input" id="bcli-direccion" type="text" maxlength="255" /></div>
+                <div class="form-field form-field--full"><button type="submit" class="btn-primary" id="btn-guardar-bulto-cliente">Guardar cliente</button> <button type="button" class="btn-secondary" id="btn-cancelar-bulto-cliente">Cancelar</button></div>
+              </form>
+            </section>
             <form id="form-agregar-bulto" class="form-grid">
               <input type="hidden" id="mg-corte-id" />
               <input type="hidden" id="mg-agencia-id" />
