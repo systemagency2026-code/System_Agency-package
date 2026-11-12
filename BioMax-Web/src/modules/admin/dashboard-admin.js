@@ -23,6 +23,7 @@ const TARIFA_DEFAULT = {
 };
 
 const ESTADO_ENVIO_OPTIONS = [
+  { value: "consolidacion_miami", label: "En Consolidación Miami" },
   { value: "despachado_miami", label: "Despachado a Almacén Miami" },
   { value: "transito_managua", label: "Tránsito a Managua" },
   { value: "recibido_managua", label: "Recibido Almacén Managua" },
@@ -30,7 +31,7 @@ const ESTADO_ENVIO_OPTIONS = [
 ];
 
 function textoEstadoEnvio(val) {
-  const k = String(val || "despachado_miami")
+  const k = String(val || "consolidacion_miami")
     .toLowerCase()
     .trim();
   const found = ESTADO_ENVIO_OPTIONS.find((o) => o.value === k);
@@ -38,7 +39,7 @@ function textoEstadoEnvio(val) {
 }
 
 function selectEstadoEnvioHtml(corteId, valorActual) {
-  const actual = String(valorActual || "despachado_miami")
+  const actual = String(valorActual || "consolidacion_miami")
     .toLowerCase()
     .trim();
   const opts = ESTADO_ENVIO_OPTIONS.map((o) => {
@@ -1197,7 +1198,7 @@ async function cargarCortesGlobalesAdmin() {
     sel.addEventListener("change", async (e) => {
       const id = e.target.getAttribute("data-id");
       const nuevo = e.target.value;
-      const prev = e.target.dataset.prev || "despachado_miami";
+      const prev = e.target.dataset.prev || "consolidacion_miami";
       const { error: upErr } = await supabase
         .from("cortes_contenedores")
         .update({ estado_envio: nuevo })
@@ -1274,7 +1275,7 @@ function setupFormCrearCorte() {
         costo_total: 0,
         total_pagado: 0,
         estado: "Pendiente",
-        estado_envio: "despachado_miami",
+        estado_envio: "consolidacion_miami",
       },
     ]);
 
