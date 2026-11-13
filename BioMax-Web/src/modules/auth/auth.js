@@ -41,6 +41,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Enlaces directos desde biomaxlogistics.com: #login o #afiliacion.
+  // Conserva el comportamiento anterior si se abre sin fragmento.
+  function aplicarDestinoInicial() {
+    const destino = window.location.hash.toLowerCase();
+    if (destino === "#login" || destino === "#iniciar-sesion") {
+      toLoginLink?.click();
+    } else if (destino === "#afiliacion" || destino === "#registro") {
+      toRegisterLink?.click();
+    }
+  }
+  aplicarDestinoInicial();
+  window.addEventListener("hashchange", aplicarDestinoInicial);
+
   function showAlert(message, type = "error") {
     alertBox.textContent = message;
     alertBox.className = `alert ${type}`;
