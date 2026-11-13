@@ -488,11 +488,12 @@
                     <th scope="col">Fecha de corte</th>
                     <th scope="col">Estado</th>
                     <th scope="col">Seguimiento</th>
+                    <th scope="col">Detalle</th>
                   </tr>
                 </thead>
                 <tbody id="tabla-contenedores-agente-body">
                   <tr class="empty-row">
-                    <td colspan="5">
+                    <td colspan="6">
                       No hay contenedores asignados a tu sucursal.
                     </td>
                   </tr>
@@ -886,7 +887,23 @@
         </div>
       </div>
 
-      <!-- Modal: ver foto del bulto (como en admin) -->
+      <!-- Consulta de contenedor: visible a agencia, sin edición -->
+      <div id="modal-consulta-contenedor-agencia" class="modal-overlay" hidden>
+        <div class="modal-card modal-card--lg" role="dialog" aria-modal="true" aria-labelledby="consulta-titulo-agencia">
+          <div class="modal-header modal-header--row">
+            <div><h3 id="consulta-titulo-agencia">Detalle del contenedor</h3><p class="modal-subtext">Resumen y paquetes de tu agencia · Solo consulta</p></div>
+            <button type="button" class="icon-btn" data-cerrar aria-label="Cerrar">✕</button>
+          </div>
+          <div id="consulta-resumen-agencia" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:14px;padding:18px;background:#f1f3f6;border-radius:14px;margin:16px 0"></div>
+          <h4 class="subpanel__title">Bultos registrados</h4>
+          <div class="table-responsive table-responsive--scroll">
+            <table class="data-table"><thead><tr><th>Foto</th><th>Tracking</th><th>Cliente</th><th>Peso</th><th>Tarifa</th><th>Costo</th></tr></thead>
+            <tbody id="consulta-bultos-agencia"></tbody></table>
+          </div>
+          <p class="cell-muted">Presioná la fotografía para ampliarla.</p>
+        </div>
+      </div>
+\n      <!-- Modal: ver foto del bulto (como en admin) -->
       <div id="modal-foto-bulto" class="modal-overlay" hidden>
         <div
           class="modal-card modal-card--md"
@@ -1299,6 +1316,11 @@
       </div>
     </main>
 
+    <style>
+      #consulta-resumen-agencia > div {display:flex;flex-direction:column;gap:5px}
+      #consulta-resumen-agencia small {color:#64748b;font-size:12px}
+      #consulta-resumen-agencia strong {color:#101b32;font-size:17px}
+    </style>
     <script type="module" src="dashboard-agency.js"></script>
   </body>
 </html>

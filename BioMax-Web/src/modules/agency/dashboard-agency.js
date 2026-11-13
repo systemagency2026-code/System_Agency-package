@@ -816,7 +816,7 @@ async function cargarContenedoresDeSucursal(agenciaId) {
     .order("created_at", { ascending: false });
 
   if (error || !cortes || cortes.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">No hay contenedores asignados a tu sucursal.</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No hay contenedores asignados a tu sucursal.</td></tr>`;
     return;
   }
 
@@ -829,7 +829,56 @@ async function cargarContenedoresDeSucursal(agenciaId) {
       <td>${escapeHtml(fechaCorteTexto(c))}</td>
       <td>${badgeHtml(c.estado || "Pendiente")}</td>
       <td>${badgeEstadoEnvio(c.estado_envio)}</td>
+      <td><button type="button" class="btn-secondary btn-sm btn-detalle-agencia">Ver detalle</button></td>
     `;
+    tr.querySelector(".btn-detalle-agencia")?.addEventListener("click", () => abrirDetalleContenedorAgencia(c));
+    tbody.appendChild(tr);
+  });
+}
+
+// Vista de consulta para la agencia: resumen y bultos sin acciones de edición.
+async function abrirDetalleContenedorAgencia(corte) {
+  if (!agenciaActual || String(corte.agencia_id) !== String(agenciaActual.id)) return;
+  const modal = $("modal-consulta-contenedor-agencia");
+  const resumen = $("consulta-resumen-agencia");
+  const tbody = $("consulta-bultos-agencia");
+  if (!modal || !resumen || !tbody) return;
+  resumen.textContent = "Cargando resumen...";
+  tbody.innerHTML = '<tr><td colspan="6">Cargando paquetes...</td></tr>';
+  openModal("modal-consulta-contenedor-agencia");
+
+  const { data: bultos, error } = await supabase
+    .from("paquetes_bultos")
+    .select("*")
+    .eq("corte_id", corte.id);
+  if (error) {
+    resumen.textContent = "No se pudieron consultar los paquetes.";
+    tbody.innerHTML = '<tr><td colspan="6">Error al cargar paquetes.</td></tr>';
+    return;
+  }
+  const lista = bultos || [];
+  const peso = lista.reduce((s, b) => s + (Number(b.peso_lbs) || 0), 0);
+  const costo = lista.reduce((s, b) => s + (Number(b.costo) || 0), 0);
+  const tarifa = peso > 0 ? costo / peso : 0;
+  $("consulta-titulo-agencia").textContent =
+    `${String(corte.tipo_envio || "Envío").toUpperCase()} · Corte ${corte.numero_corte || "N/D"}`;
+  resumen.innerHTML = `
+    <div><small>Vía del corte</small><strong>${escapeHtml(corte.tipo_envio || "—")}</strong></div>
+    <div><small>Tarifa promedio</small><strong>${formatMoney(tarifa)} / lb</strong></div>
+    <div><small>Bultos</small><strong>${lista.length}</strong></div>
+    <div><small>Libras aprox.</small><strong>${peso.toFixed(2)} lb</strong></div>
+    <div><small>Costo total</small><strong>${formatMoney(costo)}</strong></div>
+    <div><small>Seguimiento</small><strong>${escapeHtml(textoEstadoEnvio(corte.estado_envio))}</strong></div>`;
+  tbody.innerHTML = lista.length ? "" : '<tr><td colspan="6">No hay paquetes registrados.</td></tr>';
+  lista.forEach((b) => {
+    const tr = document.createElement("tr");
+    const lbs = Number(b.peso_lbs) || 0;
+    const importe = Number(b.costo) || 0;
+    const foto = b.foto_url
+      ? `<button type="button" class="btn-foto-consulta" title="Ampliar foto" style="border:0;background:none;cursor:zoom-in;padding:0"><img src="${escapeHtml(b.foto_url)}" alt="Foto del paquete" style="width:55px;height:55px;object-fit:cover;border-radius:7px"></button>`
+      : '<span class="cell-muted">Sin foto</span>';
+    tr.innerHTML = `<td>${foto}</td><td><strong>${escapeHtml(b.tracking || "—")}</strong></td><td>${escapeHtml(b.cliente_nombre || "—")}</td><td>${lbs.toFixed(2)} lb</td><td>${formatMoney(lbs ? importe / lbs : 0)}/lb</td><td><strong>${formatMoney(importe)}</strong></td>`;
+    tr.querySelector(".btn-foto-consulta")?.addEventListener("click", () => abrirModalFotoBulto(b.foto_url));
     tbody.appendChild(tr);
   });
 }
