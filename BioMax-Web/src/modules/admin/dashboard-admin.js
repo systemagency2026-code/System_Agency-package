@@ -59,7 +59,7 @@ let solicitudesSucursalCache = [];
 
 // Rol de sesión (admin | operador)
 let rolUsuario = "operador";
-const VISTAS_OPERADOR = new Set(["view-cortes", "view-solicitudes-sucursal", "view-reportes"]);
+const VISTAS_OPERADOR = new Set(["view-cortes", "view-solicitudes-sucursal", "view-reportes", "view-liquidacion"]);
 
 async function cargarPerfilSesion() {
   const {
@@ -406,6 +406,7 @@ function setupNavegacion() {
       }
 
       if (targetId === "view-reportes") prepararReportesOperativos();
+      if (targetId === "view-liquidacion") prepararLiquidacion();
       if (targetId === "view-solicitudes-sucursal") {
         cargarSolicitudesSucursal();
       }
@@ -2381,6 +2382,95 @@ function descargarReporteOperativoCSV() {
   const a=document.createElement('a');a.href=url;a.download='BioMax_Reporte_Operativo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
+// LIQUIDACIÓN DE CARGA V2 — vista previa sin escritura en Supabase.
+let liqGuias = [{id:1, numero:'', peso:'', cortes:[]}];
+let liqSiguienteId=2, liqCatalogo=[], liqAgencias=new Map(), liqFilas=[], liqResumen=[], liqCargado=false, liqValido=false;
+const liqN=(n)=>Number(n).toFixed(2);
+const liqUSD=(n)=>'$'+liqN(n);
+function liqInvalidar(){liqValido=false;$('liq-resultados').hidden=true;$('liq-aprobar').checked=false;['liq-pdf','liq-png','liq-csv'].forEach(id=>$(id).disabled=true);}
+function liqOpciones(cortes){return cortes.map(c=>`<option value="${repTexto(c.id)}">${repTexto((liqAgencias.get(String(c.agencia_id))?.nombre||'Agencia')+' · '+(c.tipo_envio||'')+' · '+(c.numero_corte||''))}</option>`).join('');}
+function liqPintar(){
+  const cont=$('liq-guias');if(!cont)return;
+  cont.innerHTML=liqGuias.map((g,i)=>`<div class="stat-card" style="border:1px solid #dce2ed;padding:14px">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><strong>Guía ${i+1}</strong><button type="button" class="btn-secondary" data-liq-quitar="${g.id}" ${liqGuias.length===1?'disabled':''}>Quitar</button></div>
+    <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px">
+      <div class="form-field"><label class="form-label">Número de guía</label><input class="form-input" data-liq-id="${g.id}" data-liq-campo="numero" value="${repTexto(g.numero)}" placeholder="Ej. REI-51374" /></div>
+      <div class="form-field"><label class="form-label">Peso total de la guía (lbs)</label><input class="form-input" data-liq-id="${g.id}" data-liq-campo="peso" type="number" step="0.01" min="0" value="${repTexto(g.peso)}" placeholder="Ej. 100.00" /></div>
+    </div>
+    <div class="form-field" style="margin-top:12px"><label class="form-label">Cortes incluidos en esta guía (Ctrl o Cmd para seleccionar varios)</label><select class="form-input" multiple size="${Math.min(7,Math.max(3,liqCatalogo.length))}" data-liq-id="${g.id}" data-liq-campo="cortes" style="min-height:110px">${liqOpciones(liqCatalogo)}</select></div>
+    <p class="card-desc" style="margin-top:6px">Un corte solo puede asignarse a una guía en esta versión de prueba.</p>
+  </div>`).join('');
+  cont.querySelectorAll('select[data-liq-campo="cortes"]').forEach(sel=>{const g=liqGuias.find(g=>String(g.id)===sel.dataset.liqId);[...sel.options].forEach(o=>o.selected=g.cortes.includes(o.value));});
+}
+async function prepararLiquidacion(){
+  if(liqCargado)return;
+  $('liq-estado').textContent='Cargando cortes y tarifas...';
+  try{
+    const [cortes,agencias]=await Promise.all([repLeerTodo('cortes_contenedores','id,agencia_id,tipo_envio,numero_corte'),repLeerTodo('agencias','id,nombre,tarifa_aereo,tarifa_maritimo,tarifa_ultra')]);
+    liqAgencias=new Map(agencias.map(a=>[String(a.id),a]));
+    liqCatalogo=cortes.sort((a,b)=>String(b.numero_corte||'').localeCompare(String(a.numero_corte||'')));
+    liqCargado=true;liqPintar();$('liq-estado').textContent=`${cortes.length} cortes disponibles. Ingresá una guía y seleccioná sus cortes.`;
+  }catch(e){$('liq-estado').textContent='No se pudieron cargar los cortes: '+e.message;}
+}
+function setupLiquidacion(){
+  $('liq-agregar')?.addEventListener('click',()=>{liqGuias.push({id:liqSiguienteId++,numero:'',peso:'',cortes:[]});liqInvalidar();liqPintar();});
+  $('liq-guias')?.addEventListener('click',e=>{const b=e.target.closest('[data-liq-quitar]');if(!b)return;liqGuias=liqGuias.filter(g=>String(g.id)!==b.dataset.liqQuitar);liqInvalidar();liqPintar();});
+  const cambiar=e=>{const el=e.target;if(!el.dataset.liqCampo)return;const g=liqGuias.find(g=>String(g.id)===el.dataset.liqId);if(!g)return;g[el.dataset.liqCampo]=el.dataset.liqCampo==='cortes'?[...el.selectedOptions].map(o=>o.value):el.value;liqInvalidar();};
+  $('liq-guias')?.addEventListener('input',cambiar);$('liq-guias')?.addEventListener('change',cambiar);
+  $('liq-generar')?.addEventListener('click',liqCalcular);
+  $('liq-aprobar')?.addEventListener('change',()=>{const ok=liqValido&&$('liq-aprobar').checked;['liq-pdf','liq-png','liq-csv'].forEach(id=>$(id).disabled=!ok);$('liq-aviso').textContent=ok?'Prorrateo autorizado para esta vista previa. No se ha guardado en la base de datos.':'Autorizá la vista previa para habilitar exportaciones. No se guardará en Supabase.';});
+  $('liq-csv')?.addEventListener('click',liqCSV);$('liq-pdf')?.addEventListener('click',liqPDF);$('liq-png')?.addEventListener('click',liqPNG);
+}
+async function liqCalcular(){
+  const btn=$('liq-generar');btn.disabled=true;liqInvalidar();$('liq-estado').textContent='Calculando pesos, tarifas y prorrateos...';
+  try{
+    if(!liqCargado)await prepararLiquidacion();if(!liqCargado)throw Error('No se pudo cargar el catálogo.');
+    const usados=new Set();
+    for(const g of liqGuias){
+      if(!g.numero.trim())throw Error('Ingresá el número de cada guía.');
+      if(g.peso===''||!Number.isFinite(Number(g.peso))||Number(g.peso)<0)throw Error('Ingresá un peso válido para cada guía.');
+      if(!g.cortes.length)throw Error('Seleccioná al menos un corte por guía.');
+      for(const id of g.cortes){if(usados.has(id))throw Error('Un mismo corte está seleccionado en más de una guía. Revisá la asignación.');usados.add(id);}
+    }
+    const ids=[...usados],pesos=new Map(ids.map(id=>[id,{peso:0,paquetes:0}]));
+    for(let k=0;k<ids.length;k+=50){const grupo=ids.slice(k,k+50);for(let off=0;off<100000;off+=1000){
+      const {data,error}=await supabase.from('paquetes_bultos').select('corte_id,peso_lbs').in('corte_id',grupo).range(off,off+999);
+      if(error)throw error;
+      for(const p of data||[]){const r=pesos.get(String(p.corte_id));if(!r)continue;const n=Number(p.peso_lbs);if(p.peso_lbs===null||p.peso_lbs===''||!Number.isFinite(n)||n<0)throw Error('Hay paquetes con peso inválido. Revisá los registros antes de liquidar.');r.peso+=n;r.paquetes++;}
+      if(!data||data.length<1000)break;if(off>=99000)throw Error('Demasiados paquetes para consultar.');
+    }}
+    const filas=[];let pesoGuia=0,pesoSistema=0,adicionalTotal=0;
+    for(const g of liqGuias){
+      const seleccion=g.cortes.map(id=>liqCatalogo.find(c=>String(c.id)===id));if(seleccion.some(c=>!c))throw Error('Un corte seleccionado ya no está disponible.');
+      const base=seleccion.reduce((n,c)=>n+pesos.get(String(c.id)).peso,0),guia=Number(g.peso),dif=guia-base;
+      if(base<=0)throw Error(`La guía ${g.numero} no tiene peso válido para prorratear.`);
+      if(dif< -0.005)throw Error(`La guía ${g.numero} pesa menos que los paquetes registrados (${liqN(dif)} lbs). Revisá los datos; no se aplican ajustes negativos automáticamente.`);
+      pesoGuia+=guia;pesoSistema+=base;adicionalTotal+=Math.max(0,dif);
+      // Cálculo a centésimas: repartir por proporción, con remanente por restos mayores.
+      const extraCent=Math.round(Math.max(0,dif)*100);
+      const cuotas=seleccion.map(c=>{const raw=extraCent*pesos.get(String(c.id)).peso/base;return {id:String(c.id),cent:Math.floor(raw),resto:raw-Math.floor(raw)};});
+      let sobrante=extraCent-cuotas.reduce((n,x)=>n+x.cent,0);
+      [...cuotas].sort((a,b)=>b.resto-a.resto).slice(0,sobrante).forEach(x=>x.cent++);
+      const cuotasMap=new Map(cuotas.map(x=>[x.id,x.cent/100]));
+      for(const c of seleccion){const p=pesos.get(String(c.id)),ag=liqAgencias.get(String(c.agencia_id)),tarifa=tarifaPorTipoEnvio(ag,c.tipo_envio),extra=cuotasMap.get(String(c.id));
+        filas.push({guia:g.numero,corte:c.numero_corte||'—',modalidad:c.tipo_envio||'—',agencia:ag?.nombre||'—',paquetes:p.paquetes,peso:p.peso,extra,final:p.peso+extra,tarifa,total:Math.round((p.peso+extra)*tarifa*100)/100});
+      }
+    }
+    const resumen=new Map();for(const f of filas){const k=f.agencia;const a=resumen.get(k)||{agencia:k,paquetes:0,peso:0,extra:0,final:0,total:0};a.paquetes+=f.paquetes;a.peso+=f.peso;a.extra+=f.extra;a.final+=f.final;a.total+=f.total;resumen.set(k,a);}
+    liqFilas=filas;liqResumen=[...resumen.values()].sort((a,b)=>a.agencia.localeCompare(b.agencia,'es'));
+    $('liq-peso-guia').textContent=liqN(pesoGuia)+' lbs';$('liq-peso-sistema').textContent=liqN(pesoSistema)+' lbs';$('liq-diferencia').textContent=liqN(pesoGuia-pesoSistema)+' lbs';$('liq-total').textContent=liqUSD(filas.reduce((n,f)=>n+f.total,0));
+    $('liq-filas').innerHTML=filas.map(f=>`<tr><td>${repTexto(f.guia)}</td><td>${repTexto(f.corte)}</td><td>${repTexto(f.modalidad)}</td><td>${repTexto(f.agencia)}</td><td>${f.paquetes}</td><td>${liqN(f.peso)}</td><td>+${liqN(f.extra)}</td><td>${liqN(f.final)}</td><td>${liqUSD(f.tarifa)}</td><td>${liqUSD(f.total)}</td></tr>`).join('');
+    $('liq-resumen').innerHTML=liqResumen.map(f=>`<tr><td>${repTexto(f.agencia)}</td><td>${f.paquetes}</td><td>${liqN(f.peso)}</td><td>+${liqN(f.extra)}</td><td>${liqN(f.final)}</td><td>${liqUSD(f.total)}</td></tr>`).join('');
+    $('liq-resultados').hidden=false;liqValido=true;$('liq-aprobar').checked=false;['liq-pdf','liq-png','liq-csv'].forEach(id=>$(id).disabled=true);
+    $('liq-estado').textContent=`Vista previa calculada: ${liqGuias.length} guía(s), ${filas.length} corte(s), ${filas.reduce((n,f)=>n+f.paquetes,0)} paquete(s). Revisá y autorizá antes de exportar.`;
+  }catch(e){console.error('Liquidación',e);$('liq-estado').textContent='No se pudo calcular: '+e.message;}
+  finally{btn.disabled=false;}
+}
+function liqExportRows(){return [['Agencia','Paquetes','Peso original lbs','Adicional lbs','Peso liquidado lbs','Total USD'],...liqResumen.map(f=>[f.agencia,f.paquetes,liqN(f.peso),liqN(f.extra),liqN(f.final),liqN(f.total)])];}
+function liqCSV(){if(!liqValido||!$('liq-aprobar').checked)return;const rows=liqExportRows();const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='BioMax_Liquidacion_Carga.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function liqPDF(){if(!liqValido||!$('liq-aprobar').checked)return;const win=window.open('','_blank');if(!win){alert('Permití las ventanas emergentes para guardar el PDF.');return;}const rows=liqExportRows();const tabla=rows.map((r,i)=>'<tr>'+r.map(v=>`<${i?'td':'th'}>${repTexto(v)}</${i?'td':'th'}>`).join('')+'</tr>').join('');win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>BioMax - Liquidación</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#172238}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #ccd3de;padding:9px;text-align:left}th{background:#edf2f9}h1{margin-bottom:4px}p{color:#586477}@media print{body{padding:0}}</style></head><body><h1>BioMax · Liquidación de carga</h1><p>Guías: ${repTexto(liqGuias.map(g=>g.numero).join(', '))} · Vista previa autorizada · ${new Date().toLocaleDateString('es-NI')}</p><table>${tabla}</table><p>Documento de prueba. No representa una liquidación guardada en el sistema.</p></body></html>`);win.document.close();win.focus();setTimeout(()=>win.print(),350);}
+function liqPNG(){if(!liqValido||!$('liq-aprobar').checked)return;const rows=liqExportRows(),w=1120,h=175+rows.length*44,cv=document.createElement('canvas');cv.width=w*2;cv.height=h*2;const ctx=cv.getContext('2d');ctx.scale(2,2);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.fillStyle='#14213d';ctx.font='bold 30px Arial';ctx.fillText('BioMax · Liquidación de carga',32,48);ctx.font='16px Arial';ctx.fillText('Guías: '+liqGuias.map(g=>g.numero).join(', ').slice(0,110),32,83);ctx.fillText('Vista previa autorizada · '+new Date().toLocaleDateString('es-NI'),32,108);const widths=[230,115,175,160,200,175],xs=[32];for(let i=0;i<widths.length-1;i++)xs.push(xs[i]+widths[i]);rows.forEach((r,i)=>{const y=135+i*44;ctx.fillStyle=i===0?'#e8eef8':i%2?'#fff':'#f6f8fb';ctx.fillRect(24,y-25,w-48,44);ctx.fillStyle='#14213d';ctx.font=(i===0?'bold ':'')+'14px Arial';r.forEach((v,j)=>ctx.fillText(String(v).slice(0,j===0?24:22),xs[j],y, widths[j]-12));});ctx.font='13px Arial';ctx.fillText('Documento de prueba. No guardado en BioMax.',32,h-12);cv.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='BioMax_Liquidacion_Carga.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},'image/png');}
+
 async function initAdminDashboard() {
   const ctx = await cargarPerfilSesion();
   if (!ctx) return;
@@ -2395,6 +2485,7 @@ async function initAdminDashboard() {
   setupFormBultos();
   setupSolicitudesSucursal();
   setupReportesOperativos();
+  setupLiquidacion();
 
   if (ctx.rol === "admin") {
     setupPasswordTools();

@@ -181,6 +181,7 @@
               <span>Contenedores y cortes</span>
             </a>
           </li>
+          <li><a href="#view-liquidacion" class="nav-link" data-target="view-liquidacion"><svg class="icon" aria-hidden="true"><use href="#i-box"></use></svg><span>Liquidación de carga</span></a></li>
           <li><a href="#view-reportes" class="nav-link" data-target="view-reportes"><svg class="icon" aria-hidden="true"><use href="#i-box"></use></svg><span>Reportes operativos</span></a></li>
         </ul>
       </nav>
@@ -1571,6 +1572,43 @@
           </div>
         </div>
       </div>
+
+      <!-- Liquidación de carga: vista previa sin escritura en base de datos -->
+      <section id="view-liquidacion" class="dashboard-view" aria-label="Liquidación de carga" hidden>
+        <article class="stat-card" style="margin-bottom:16px">
+          <h3 class="card-title">Liquidación de carga por guías y cortes</h3>
+          <p class="card-desc">Agregá guías, ingresá el peso del transportista y asigná uno o varios cortes a cada guía. El peso adicional se distribuye proporcionalmente por agencia, previa autorización.</p>
+          <div id="liq-guias" style="display:grid;gap:12px;margin-top:16px"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+            <button id="liq-agregar" type="button" class="btn-secondary">+ Agregar guía</button>
+            <button id="liq-generar" type="button" class="btn-primary">Calcular liquidación</button>
+          </div>
+          <p id="liq-estado" role="status" aria-live="polite" style="margin-top:12px">Seleccioná las guías y cortes para comenzar.</p>
+        </article>
+        <div id="liq-resultados" hidden>
+          <div class="grid-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px">
+            <article class="stat-card"><h3>Peso de guías</h3><div class="value" id="liq-peso-guia">0.00</div></article>
+            <article class="stat-card"><h3>Peso BioMax</h3><div class="value" id="liq-peso-sistema">0.00</div></article>
+            <article class="stat-card"><h3>Diferencia</h3><div class="value" id="liq-diferencia">0.00</div></article>
+            <article class="stat-card"><h3>Total a transferir</h3><div class="value" id="liq-total">$0.00</div></article>
+          </div>
+          <article class="stat-card" style="margin-bottom:16px">
+            <h3 class="card-title">Desglose por guía, corte y agencia</h3>
+            <div class="table-responsive" style="overflow-x:auto;margin-top:12px"><table class="data-table" style="min-width:940px"><thead><tr><th>Guía</th><th>Corte</th><th>Modalidad</th><th>Agencia</th><th>Paquetes</th><th>Peso original</th><th>Peso adicional</th><th>Peso liquidado</th><th>Tarifa/lb</th><th>Total USD</th></tr></thead><tbody id="liq-filas"></tbody></table></div>
+          </article>
+          <article class="stat-card" style="margin-bottom:16px">
+            <h3 class="card-title">Resumen por agencia</h3>
+            <div class="table-responsive" style="overflow-x:auto;margin-top:12px"><table class="data-table" style="min-width:650px"><thead><tr><th>Agencia</th><th>Paquetes</th><th>Peso original</th><th>Adicional</th><th>Peso liquidado</th><th>Total USD</th></tr></thead><tbody id="liq-resumen"></tbody></table></div>
+            <label style="display:flex;gap:8px;align-items:flex-start;margin-top:18px"><input id="liq-aprobar" type="checkbox" style="margin-top:4px" /> He revisado los pesos y autorizo el prorrateo mostrado para esta vista previa.</label>
+            <p id="liq-aviso" class="card-desc" style="margin-top:8px">Esta autorización es solo para la vista previa. No guarda una liquidación en Supabase ni modifica pesos originales.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+              <button id="liq-pdf" class="btn-secondary" type="button" disabled>Imprimir / Guardar PDF</button>
+              <button id="liq-png" class="btn-secondary" type="button" disabled>Descargar imagen PNG</button>
+              <button id="liq-csv" class="btn-secondary" type="button" disabled>Descargar CSV</button>
+            </div>
+          </article>
+        </div>
+      </section>
 
       <section id="view-reportes" class="dashboard-view" aria-label="Reportes operativos" hidden>
         <article class="stat-card" style="margin-bottom:18px">
