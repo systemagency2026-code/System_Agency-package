@@ -238,3 +238,54 @@
     font-size: var(--text-base);
   }
 }
+
+/* BioMax: mejoras de interacción para teléfonos y pantallas táctiles. */
+@media (max-width: 640px) {
+  .content-body, .dashboard-view, .dashboard-row,
+  .card, .subpanel, .modal-card, .table-responsive {
+    min-width: 0;
+  }
+  .modal-card {
+    width: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-header--row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .modal-header--row > :first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .modal-header--row .icon-btn {
+    flex-shrink: 0;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .form-grid > *, .form-grid--2 > * {
+    min-width: 0;
+  }
+  input, select, textarea {
+    max-width: 100%;
+  }
+  .btn-sm, .icon-btn {
+    touch-action: manipulation;
+  }
+}
+@media (max-width: 380px) {
+  .content-body {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .modal-card {
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+  }
+}
