@@ -56,3 +56,4 @@ Incluye panel de **administrador global**, panel de **sucursal (agente)** y back
             ├── admin/                  ← dashboard-admin.html/css/js
             └── agency/                 ← dashboard-agency.html/css/js
 ```
+Actualización de despliegue BioMax - Reportes operativos V1
