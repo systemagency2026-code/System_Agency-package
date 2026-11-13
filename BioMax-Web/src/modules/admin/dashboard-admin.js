@@ -59,7 +59,7 @@ let solicitudesSucursalCache = [];
 
 // Rol de sesión (admin | operador)
 let rolUsuario = "operador";
-const VISTAS_OPERADOR = new Set(["view-cortes", "view-solicitudes-sucursal"]);
+const VISTAS_OPERADOR = new Set(["view-cortes", "view-solicitudes-sucursal", "view-reportes"]);
 
 async function cargarPerfilSesion() {
   const {
@@ -405,6 +405,7 @@ function setupNavegacion() {
           : link.textContent.trim();
       }
 
+      if (targetId === "view-reportes") prepararReportesOperativos();
       if (targetId === "view-solicitudes-sucursal") {
         cargarSolicitudesSucursal();
       }
@@ -2279,6 +2280,107 @@ async function loadSolicitudesPendientes() {
   }
 }
 
+
+// REPORTES OPERATIVOS: solo lectura, para Superadmin y Operador.
+const REP_TARIFA_PEQUENO = 0.20;
+const REP_TARIFA_GRANDE = 1.00;
+let repUltimasFilas = [];
+let repPreparado = false;
+function repNormalizar(s) { return String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+function repDinero(n) { return "$" + n.toFixed(2); }
+function repTexto(s) { return String(s ?? "").replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function repModalidad(tipo) { const t=repNormalizar(tipo); return t.includes('aer') ? 'aereo' : t.includes('mar') ? 'mar' : t; }
+async function repLeerTodo(tabla, campos) {
+  const filas=[];
+  for(let inicio=0; inicio<100000; inicio+=1000) {
+    const {data,error}=await supabase.from(tabla).select(campos).range(inicio,inicio+999);
+    if(error) throw error;
+    filas.push(...(data||[]));
+    if(!data || data.length<1000) return filas;
+  }
+  throw new Error('Se superó el límite de 100,000 registros. Aplicá filtros más específicos.');
+}
+async function prepararReportesOperativos() {
+  if(repPreparado) return;
+  repPreparado=true;
+  try {
+    const agencias=await repLeerTodo('agencias','id,nombre');
+    const selector=$('rep-agencia');
+    agencias.sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
+    agencias.forEach(a=>{ const o=document.createElement('option');o.value=a.id;o.textContent=a.nombre||a.id;selector.appendChild(o); });
+  } catch(e) {
+    repPreparado=false;
+    $('rep-estado').textContent='No se pudieron cargar las agencias: '+e.message;
+  }
+}
+function setupReportesOperativos() {
+  $('rep-consultar')?.addEventListener('click', generarReporteOperativo);
+  $('rep-csv')?.addEventListener('click', descargarReporteOperativoCSV);
+  $('rep-busqueda')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();generarReporteOperativo();}});
+}
+async function generarReporteOperativo() {
+  const boton=$('rep-consultar'), estado=$('rep-estado');
+  boton.disabled=true;
+  $('rep-csv').disabled=true;
+  estado.textContent='Consultando cortes y paquetes...';
+  try {
+    const [agencias,cortes]=await Promise.all([
+      repLeerTodo('agencias','id,nombre'),
+      repLeerTodo('cortes_contenedores','id,agencia_id,tipo_envio,numero_corte')
+    ]);
+    const nombres=new Map(agencias.map(a=>[String(a.id),a.nombre||'—']));
+    const q=repNormalizar($('rep-busqueda').value.trim());
+    const agencia=$('rep-agencia').value;
+    const modalidad=$('rep-modalidad').value;
+    const seleccion=cortes.filter(c=>{
+      const nombre=nombres.get(String(c.agencia_id))||'';
+      const coincide=!q||repNormalizar([nombre,c.numero_corte,c.tipo_envio].join(' ')).includes(q);
+      return coincide && (!agencia||String(c.agencia_id)===agencia) && (!modalidad||repModalidad(c.tipo_envio)===modalidad);
+    });
+    // Se consultan paquetes en lotes de cortes, evitando cargar paquetes de otros cortes.
+    const mapa=new Map(seleccion.map(c=>[String(c.id),{agencia:nombres.get(String(c.agencia_id))||'—',corte:c.numero_corte||'—',tipo:c.tipo_envio||'—',pequenos:0,grandes:0}]));
+    const ids=seleccion.map(c=>c.id);
+    for(let k=0;k<ids.length;k+=50) {
+      const grupo=ids.slice(k,k+50);
+      for(let offset=0;offset<100000;offset+=1000) {
+        const {data,error}=await supabase.from('paquetes_bultos').select('corte_id,peso_lbs').in('corte_id',grupo).range(offset,offset+999);
+        if(error) throw error;
+        for(const b of data||[]) {
+          const fila=mapa.get(String(b.corte_id));
+          if(!fila) continue;
+          const peso=Number(b.peso_lbs);
+          if(!Number.isFinite(peso)||peso<0) continue;
+          if(peso>=20) fila.grandes++; else fila.pequenos++;
+        }
+        if(!data||data.length<1000) break;
+        if(offset>=99000) throw new Error('Demasiados paquetes en la consulta; acotá los filtros.');
+      }
+    }
+    repUltimasFilas=[...mapa.values()].map(f=>({...f,total:f.pequenos+f.grandes,pago:f.pequenos*REP_TARIFA_PEQUENO+f.grandes*REP_TARIFA_GRANDE}));
+    repUltimasFilas.sort((a,b)=>a.agencia.localeCompare(b.agencia,'es')||String(a.corte).localeCompare(String(b.corte),'es'));
+    const totalP=repUltimasFilas.reduce((n,f)=>n+f.pequenos,0);
+    const totalG=repUltimasFilas.reduce((n,f)=>n+f.grandes,0);
+    $('rep-pequenos').textContent=totalP;
+    $('rep-grandes').textContent=totalG;
+    $('rep-total').textContent=totalP+totalG;
+    $('rep-pago').textContent=repDinero(totalP*.20+totalG);
+    $('rep-filas').innerHTML=repUltimasFilas.length ? repUltimasFilas.map(f=>`<tr><td>${repTexto(f.agencia)}</td><td>${repTexto(f.corte)}</td><td>${repTexto(f.tipo)}</td><td>${f.pequenos}</td><td>${f.grandes}</td><td>${f.total}</td><td>${repDinero(f.pago)}</td></tr>`).join('') : '<tr><td colspan="7">No hay cortes que coincidan con los filtros.</td></tr>';
+    estado.textContent=`Reporte generado: ${seleccion.length} corte(s), ${totalP+totalG} paquete(s). Paquetes sin peso válido no se contabilizan.`;
+    $('rep-csv').disabled=repUltimasFilas.length===0;
+  } catch(e) {
+    console.error('Error reporte operativo',e);
+    estado.textContent='No se pudo generar el reporte: '+e.message;
+    repUltimasFilas=[];
+  } finally {boton.disabled=false;}
+}
+function descargarReporteOperativoCSV() {
+  if(!repUltimasFilas.length)return;
+  const filas=[['Agencia','Corte','Modalidad','Menores de 20 lb','Desde 20 lb','Total paquetes','Pago USD'],...repUltimasFilas.map(f=>[f.agencia,f.corte,f.tipo,f.pequenos,f.grandes,f.total,f.pago.toFixed(2)])];
+  const csv='\uFEFF'+filas.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  const a=document.createElement('a');a.href=url;a.download='BioMax_Reporte_Operativo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
 async function initAdminDashboard() {
   const ctx = await cargarPerfilSesion();
   if (!ctx) return;
@@ -2292,6 +2394,7 @@ async function initAdminDashboard() {
   setupFormCrearCorte();
   setupFormBultos();
   setupSolicitudesSucursal();
+  setupReportesOperativos();
 
   if (ctx.rol === "admin") {
     setupPasswordTools();

@@ -181,6 +181,7 @@
               <span>Contenedores y cortes</span>
             </a>
           </li>
+          <li><a href="#view-reportes" class="nav-link" data-target="view-reportes"><svg class="icon" aria-hidden="true"><use href="#i-box"></use></svg><span>Reportes operativos</span></a></li>
         </ul>
       </nav>
       <div class="sidebar-footer">
@@ -1570,6 +1571,31 @@
           </div>
         </div>
       </div>
+
+      <section id="view-reportes" class="dashboard-view" aria-label="Reportes operativos" hidden>
+        <article class="stat-card" style="margin-bottom:18px">
+          <h3 class="card-title">Reporte de paquetes por corte</h3>
+          <p class="card-desc">Filtrá por palabra clave, agencia y modalidad. Pago por paquete: menos de 20 lb = US$0.20; desde 20 lb = US$1.00.</p>
+          <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:18px">
+            <div class="form-field"><label class="form-label" for="rep-busqueda">Corte o palabra clave</label><input id="rep-busqueda" class="form-input" placeholder="Ej. 1111, BIO, Mar" /></div>
+            <div class="form-field"><label class="form-label" for="rep-agencia">Agencia</label><select id="rep-agencia" class="form-input"><option value="">Todas las agencias</option></select></div>
+            <div class="form-field"><label class="form-label" for="rep-modalidad">Modalidad</label><select id="rep-modalidad" class="form-input"><option value="">Todas</option><option value="aereo">Aéreo</option><option value="mar">Marítimo</option></select></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px"><button id="rep-consultar" type="button" class="btn-primary">Generar reporte</button><button id="rep-csv" type="button" class="btn-secondary" disabled>Descargar CSV para Excel</button></div>
+          <p id="rep-estado" role="status" aria-live="polite" style="margin-top:12px">Seleccioná los filtros y generá el reporte.</p>
+        </article>
+        <div class="grid-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px">
+          <article class="stat-card"><h3>Paquetes menores de 20 lb</h3><div class="value" id="rep-pequenos">0</div></article>
+          <article class="stat-card"><h3>Paquetes desde 20 lb</h3><div class="value" id="rep-grandes">0</div></article>
+          <article class="stat-card"><h3>Total paquetes</h3><div class="value" id="rep-total">0</div></article>
+          <article class="stat-card"><h3>Pago total (USD)</h3><div class="value" id="rep-pago">$0.00</div></article>
+        </div>
+        <article class="stat-card"><h3 class="card-title">Desglose por contenedor y corte</h3>
+          <div class="table-responsive" style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:12px">
+            <table class="data-table" style="min-width:720px"><thead><tr><th>Agencia</th><th>Corte</th><th>Modalidad</th><th>Menores de 20 lb</th><th>Desde 20 lb</th><th>Total paquetes</th><th>Pago USD</th></tr></thead><tbody id="rep-filas"><tr><td colspan="7">Sin reporte generado.</td></tr></tbody></table>
+          </div>
+        </article>
+      </section>
     </main>
 
     <script type="module" src="dashboard-admin.js"></script>
