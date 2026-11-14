@@ -183,6 +183,8 @@
           </li>
           <li><a href="#view-liquidacion" class="nav-link" data-target="view-liquidacion"><svg class="icon" aria-hidden="true"><use href="#i-box"></use></svg><span>Liquidación de carga</span></a></li>
           <li><a href="#view-reportes" class="nav-link" data-target="view-reportes"><svg class="icon" aria-hidden="true"><use href="#i-box"></use></svg><span>Reportes operativos</span></a></li>
+          <!-- Nueva ruta NIC → USA: independiente de las vistas existentes -->
+          <li><a href="#view-nic-usa" class="nav-link" data-target="view-nic-usa"><svg class="icon" aria-hidden="true"><use href="#i-package"></use></svg><span>Nicaragua → Estados Unidos</span></a></li>
         </ul>
       </nav>
       <div class="sidebar-footer">
@@ -1608,6 +1610,21 @@
             </div>
           </article>
         </div>
+      </section>
+
+      <!-- Módulo NIC → USA: pantalla inicial. No realiza escrituras en Supabase. -->
+      <section id="view-nic-usa" class="dashboard-view" aria-label="Nicaragua a Estados Unidos" hidden>
+        <article class="stat-card" style="margin-bottom:18px">
+          <h3 class="card-title">Envíos Nicaragua → Estados Unidos</h3>
+          <p class="card-desc">Módulo exclusivo de carga aérea. Esta sección se implementará de forma independiente a Estados Unidos → Nicaragua.</p>
+          <div class="grid-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:20px">
+            <div class="subpanel"><h4 class="subpanel__title">Registro de envíos</h4><p class="hint">Formulario por agencia, tipo de carga y peso.</p><span class="hint">Pendiente de habilitación</span></div>
+            <div class="subpanel"><h4 class="subpanel__title">Fechas de vuelo</h4><p class="hint">Vuelos programados por Superadmin para selección de las agencias.</p><span class="hint">Pendiente de habilitación</span></div>
+            <div class="subpanel"><h4 class="subpanel__title">Tarifas por agencia</h4><p class="hint">Tarifario propio de Nicaragua → Estados Unidos.</p><span class="hint">Pendiente de habilitación</span></div>
+            <div class="subpanel"><h4 class="subpanel__title">Reportes de carga</h4><p class="hint">Resumen por vuelo, agencia y paquetes registrados.</p><span class="hint">Pendiente de habilitación</span></div>
+          </div>
+          <p class="hint" style="margin-top:18px">Esta primera etapa solo habilita la navegación y la vista inicial; todavía no registra envíos ni modifica información.</p>
+        </article>
       </section>
 
       <section id="view-reportes" class="dashboard-view" aria-label="Reportes operativos" hidden>
