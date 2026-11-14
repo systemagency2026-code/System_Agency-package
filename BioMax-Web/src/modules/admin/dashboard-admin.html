@@ -1637,11 +1637,11 @@
 <h3 class="card-title">Registro de envío · Nicaragua → Estados Unidos</h3>
 <p class="card-desc">Carga aérea exclusivamente. Formulario de revisión: todavía no registra envíos en Supabase.</p>
 <form id="nicusa-form" autocomplete="on">
+
 <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px">
 <div class="form-field"><label class="form-label" for="nicusa-remitente">Remitente · nombre *</label><input class="form-input" id="nicusa-remitente" required maxlength="160"></div>
 <div class="form-field"><label class="form-label" for="nicusa-remitente-tel">Remitente · teléfono *</label><input class="form-input" id="nicusa-remitente-tel" type="tel" required maxlength="40"></div>
-<div class="form-field"><label class="form-label" for="nicusa-dest-nombre">Destinatario · nombre *</label><input class="form-input" id="nicusa-dest-nombre" required maxlength="100"></div>
-<div class="form-field"><label class="form-label" for="nicusa-dest-apellido">Destinatario · apellido *</label><input class="form-input" id="nicusa-dest-apellido" required maxlength="100"></div>
+<div class="form-field"><label class="form-label" for="nicusa-dest-nombre">Destinatario · nombre completo *</label><input class="form-input" id="nicusa-dest-nombre" required maxlength="200" autocomplete="name" aria-describedby="nicusa-dest-ayuda"><p class="hint" id="nicusa-dest-ayuda">Al escribir, aquí aparecerán los destinatarios guardados de tu agencia cuando habilitemos la libreta en Supabase.</p></div>
 <div class="form-field"><label class="form-label" for="nicusa-dest-tel">Destinatario · teléfono *</label><input class="form-input" id="nicusa-dest-tel" type="tel" required maxlength="40"></div>
 <div class="form-field"><label class="form-label" for="nicusa-calle">Dirección · calle y número *</label><input class="form-input" id="nicusa-calle" required maxlength="220"></div>
 <div class="form-field"><label class="form-label" for="nicusa-apto">Apartamento / unidad</label><input class="form-input" id="nicusa-apto" maxlength="80"></div>
@@ -1649,7 +1649,7 @@
 <div class="form-field"><label class="form-label" for="nicusa-estado">Estado (EE. UU.) *</label><input class="form-input" id="nicusa-estado" required maxlength="80"></div>
 <div class="form-field"><label class="form-label" for="nicusa-zip">ZIP *</label><input class="form-input" id="nicusa-zip" required inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="33126 o 33126-1234"></div>
 <div class="form-field"><label class="form-label" for="nicusa-vuelo">Fecha de vuelo *</label><select class="form-input" id="nicusa-vuelo" required disabled><option value="">Pendiente: SuperAdmin debe publicar vuelos</option></select></div>
-<div class="form-field"><label class="form-label" for="nicusa-categoria">Tipo de carga *</label><select class="form-input" id="nicusa-categoria" required disabled><option value="">Pendiente: catálogo y tarifas aprobados</option></select></div>
+<div class="form-field"><span class="form-label" id="nicusa-categoria-label">Tipos de carga (podés elegir varios) *</span><fieldset id="nicusa-categorias" aria-labelledby="nicusa-categoria-label" style="border:1px solid #dbe3ed;border-radius:12px;padding:12px;display:grid;gap:9px"><legend style="font-size:0.8rem">Selección preliminar</legend><label><input type="checkbox" name="nicusa-categoria" value="general"> Carga general</label><label><input type="checkbox" name="nicusa-categoria" value="medicamentos"> Medicamentos</label><label><input type="checkbox" name="nicusa-categoria" value="documentos"> Documentos</label><label><input type="checkbox" name="nicusa-categoria" value="otros"> Otros (pendiente de definir)</label></fieldset><p class="hint">Categorías ilustrativas, no son el tarifario aprobado. Se podrán combinar; las tarifas y el peso por categoría se configurarán después.</p><p class="hint" id="nicusa-categorias-seleccionadas" aria-live="polite">Ninguna categoría seleccionada.</p></div>
 <div class="form-field"><label class="form-label" for="nicusa-peso">Peso real (lbs) *</label><input class="form-input" id="nicusa-peso" type="number" min="0.01" step="any" inputmode="decimal" placeholder="Ej. 2.74" required></div>
 <div class="form-field"><label class="form-label" for="nicusa-peso-facturable">Peso facturable (lbs)</label><output id="nicusa-peso-facturable" style="display:block;font-size:1.5rem;font-weight:750;padding:8px 0">—</output></div>
 </div>
