@@ -160,6 +160,7 @@
               <span>Contenedores y cortes</span>
             </a>
           </li>
+          <li><a href="#view-nic-usa-agencia" class="nav-link" data-target="view-nic-usa-agencia"><svg class="icon" aria-hidden="true"><use href="#i-package"></use></svg><span>Nicaragua → Estados Unidos</span></a></li>
         </ul>
       </nav>
       <div class="sidebar-footer">
@@ -205,6 +206,34 @@
 
       <div class="content-body">
         <!-- RESUMEN DE SUCURSAL -->
+        <section id="view-nic-usa-agencia" class="dashboard-view" aria-label="Nicaragua a Estados Unidos" hidden>
+<article class="stat-card" style="margin-bottom:18px">
+<h3 class="card-title">Registro de envío · Nicaragua → Estados Unidos</h3>
+<p class="card-desc">Carga aérea exclusivamente. Formulario de revisión: todavía no registra envíos en Supabase.</p>
+<form id="nicusa-form" autocomplete="on">
+<div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px">
+<div class="form-field"><label class="form-label" for="nicusa-remitente">Remitente · nombre *</label><input class="form-input" id="nicusa-remitente" required maxlength="160"></div>
+<div class="form-field"><label class="form-label" for="nicusa-remitente-tel">Remitente · teléfono *</label><input class="form-input" id="nicusa-remitente-tel" type="tel" required maxlength="40"></div>
+<div class="form-field"><label class="form-label" for="nicusa-dest-nombre">Destinatario · nombre *</label><input class="form-input" id="nicusa-dest-nombre" required maxlength="100"></div>
+<div class="form-field"><label class="form-label" for="nicusa-dest-apellido">Destinatario · apellido *</label><input class="form-input" id="nicusa-dest-apellido" required maxlength="100"></div>
+<div class="form-field"><label class="form-label" for="nicusa-dest-tel">Destinatario · teléfono *</label><input class="form-input" id="nicusa-dest-tel" type="tel" required maxlength="40"></div>
+<div class="form-field"><label class="form-label" for="nicusa-calle">Dirección · calle y número *</label><input class="form-input" id="nicusa-calle" required maxlength="220"></div>
+<div class="form-field"><label class="form-label" for="nicusa-apto">Apartamento / unidad</label><input class="form-input" id="nicusa-apto" maxlength="80"></div>
+<div class="form-field"><label class="form-label" for="nicusa-ciudad">Ciudad *</label><input class="form-input" id="nicusa-ciudad" required maxlength="100"></div>
+<div class="form-field"><label class="form-label" for="nicusa-estado">Estado (EE. UU.) *</label><input class="form-input" id="nicusa-estado" required maxlength="80"></div>
+<div class="form-field"><label class="form-label" for="nicusa-zip">ZIP *</label><input class="form-input" id="nicusa-zip" required inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="33126 o 33126-1234"></div>
+<div class="form-field"><label class="form-label" for="nicusa-vuelo">Fecha de vuelo *</label><select class="form-input" id="nicusa-vuelo" required disabled><option value="">Pendiente: SuperAdmin debe publicar vuelos</option></select></div>
+<div class="form-field"><label class="form-label" for="nicusa-categoria">Tipo de carga *</label><select class="form-input" id="nicusa-categoria" required disabled><option value="">Pendiente: catálogo y tarifas aprobados</option></select></div>
+<div class="form-field"><label class="form-label" for="nicusa-peso">Peso real (lbs) *</label><input class="form-input" id="nicusa-peso" type="number" min="0.01" step="any" inputmode="decimal" placeholder="Ej. 2.74" required></div>
+<div class="form-field"><label class="form-label" for="nicusa-peso-facturable">Peso facturable (lbs)</label><output id="nicusa-peso-facturable" style="display:block;font-size:1.5rem;font-weight:750;padding:8px 0">—</output></div>
+</div>
+<div class="form-field" style="margin-top:14px"><label class="form-label" for="nicusa-inventario">Inventario detallado (artículo y cantidad) *</label><textarea class="form-input" id="nicusa-inventario" rows="4" required placeholder="Ej. 2 camisas, 1 libro"></textarea></div>
+<div class="form-field" style="margin-top:14px"><label class="form-label" for="nicusa-foto">Foto de los artículos fuera del paquete *</label><input class="form-input" id="nicusa-foto" type="file" accept="image/jpeg,image/png,image/webp" required><p class="hint">La fotografía no se carga ni se almacena en esta etapa.</p></div>
+<div class="form-field" style="margin-top:14px"><label class="form-label" for="nicusa-notas">Observaciones</label><textarea class="form-input" id="nicusa-notas" rows="2" placeholder="Opcional; pendiente de confirmar obligatoriedad"></textarea></div>
+<p id="nicusa-aviso" class="hint" role="status" style="margin-top:16px">Vista preliminar: no se guardan datos ni se generan cobros.</p>
+<button class="btn-primary" type="button" disabled title="Se habilitará al configurar vuelos, tarifas y permisos en Supabase">Registrar envío (próxima etapa)</button>
+</form></article>
+</section>
         <section
           id="view-resumen-agente"
           class="dashboard-view"
@@ -903,7 +932,8 @@
           <p class="cell-muted">Presioná la fotografía para ampliarla.</p>
         </div>
       </div>
-\n      <!-- Modal: ver foto del bulto (como en admin) -->
+
+      <!-- Modal: ver foto del bulto (como en admin) -->
       <div id="modal-foto-bulto" class="modal-overlay" hidden>
         <div
           class="modal-card modal-card--md"
@@ -1321,6 +1351,7 @@
       #consulta-resumen-agencia small {color:#64748b;font-size:12px}
       #consulta-resumen-agencia strong {color:#101b32;font-size:17px}
     </style>
+<script src="nicusa-form-preview.js" defer></script>
     <script type="module" src="dashboard-agency.js"></script>
   </body>
 </html>
