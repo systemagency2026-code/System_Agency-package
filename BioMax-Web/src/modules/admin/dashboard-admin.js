@@ -59,7 +59,7 @@ let solicitudesSucursalCache = [];
 
 // Rol de sesión (admin | operador)
 let rolUsuario = "operador";
-const VISTAS_OPERADOR = new Set(["view-cortes", "view-solicitudes-sucursal", "view-reportes", "view-liquidacion"]);
+const VISTAS_OPERADOR = new Set(["view-cortes", "view-solicitudes-sucursal", "view-reportes"]);
 
 async function cargarPerfilSesion() {
   const {
@@ -2383,11 +2383,12 @@ function descargarReporteOperativoCSV() {
 }
 
 // LIQUIDACIÓN DE CARGA V2 — vista previa sin escritura en Supabase.
+let liqGuardadaActual=false;
 let liqGuias = [{id:1, numero:'', peso:'', transportista:'', entrega:'', estado:'Acta pendiente', condicion:'Contado', cortes:[]}];
 let liqSiguienteId=2, liqCatalogo=[], liqAgencias=new Map(), liqFilas=[], liqResumen=[], liqCargado=false, liqValido=false, liqTotales={};
 const liqN=(n)=>Number(n).toFixed(2);
 const liqUSD=(n)=>'$'+liqN(n);
-function liqInvalidar(){liqValido=false;$('liq-resultados').hidden=true;$('liq-aprobar').checked=false;['liq-pdf','liq-png','liq-csv'].forEach(id=>$(id).disabled=true);}
+function liqInvalidar(){liqGuardadaActual=false;liqValido=false;if($('liq-guardar'))$('liq-guardar').disabled=true;$('liq-resultados').hidden=true;$('liq-aprobar').checked=false;['liq-pdf','liq-png','liq-csv'].forEach(id=>$(id).disabled=true);}
 function liqOpciones(cortes){return cortes.map(c=>`<option value="${repTexto(c.id)}">${repTexto((liqAgencias.get(String(c.agencia_id))?.nombre||'Agencia')+' · '+(c.tipo_envio||'')+' · '+(c.numero_corte||''))}</option>`).join('');}
 function liqPintar(){
   const cont=$('liq-guias');if(!cont)return;
@@ -2430,7 +2431,10 @@ function setupLiquidacion(){
   const cambiar=e=>{const el=e.target;if(!el.dataset.liqCampo)return;const g=liqGuias.find(g=>String(g.id)===el.dataset.liqId);if(!g)return;g[el.dataset.liqCampo]=el.dataset.liqCampo==='cortes'?[...el.selectedOptions].map(o=>o.value):el.value;liqInvalidar();};
   $('liq-guias')?.addEventListener('input',cambiar);$('liq-guias')?.addEventListener('change',cambiar);
   $('liq-generar')?.addEventListener('click',liqCalcular);
-  $('liq-aprobar')?.addEventListener('change',()=>{const ok=liqValido&&$('liq-aprobar').checked;['liq-pdf','liq-png','liq-csv'].forEach(id=>$(id).disabled=!ok);$('liq-aviso').textContent=ok?'Prorrateo autorizado para esta vista previa. No se ha guardado en la base de datos.':'Autorizá la vista previa para habilitar exportaciones. No se guardará en Supabase.';});
+  $('liq-aprobar')?.addEventListener('change',()=>{const ok=liqValido&&$('liq-aprobar').checked;['liq-pdf','liq-png','liq-csv','liq-guardar'].forEach(id=>$(id).disabled=!ok);$('liq-aviso').textContent=ok?'Vista previa autorizada. Solo se archivará si presionás Guardar liquidación.':'Autorizá la vista previa para exportar o guardar. No se guarda automáticamente.';});
+  $('liq-guardar')?.addEventListener('click',liqGuardarHistorial);
+  $('liq-historial-actualizar')?.addEventListener('click',liqCargarHistorial);
+  $('liq-historial')?.addEventListener('click',liqAccionHistorial);
   $('liq-csv')?.addEventListener('click',liqCSV);$('liq-pdf')?.addEventListener('click',liqPDF);$('liq-png')?.addEventListener('click',liqPNG);
 }
 async function liqCalcular(){
@@ -2491,7 +2495,7 @@ async function liqCalcular(){
     const maestras=['BIO','MML'];$('liq-maestras').innerHTML=maestras.map(m=>`<tr><td><strong>${m==='BIO'?'Bring It On (BIO)':'MarMax Logistics (MML)'}</strong></td><td><strong>${liqUSD(filas.filter(f=>f.maestra===m).reduce((n,f)=>n+f.costoAduana,0))}</strong></td></tr>`).join('');
     $('liq-guias-resumen').innerHTML=detallesGuias.map(g=>`<tr><td>${repTexto(g.numero)}</td><td>${repTexto(g.transportista)}</td><td>${repTexto(g.cortes)}</td><td>${repTexto(g.modalidad)}</td><td>${repTexto(g.entrega)}</td><td>${repTexto(g.estado)}</td><td>${repTexto(g.condicion)}</td><td>${liqN(g.pesoGuia)}</td><td>${liqN(g.pesoSistema)}</td><td>${liqN(g.diferencia)}</td><td>${liqUSD(g.tarifaAduana)}</td><td>${liqUSD(g.costoAduana)}</td></tr>`).join('');
     $('liq-resultados').hidden=false;liqValido=true;$('liq-aprobar').checked=false;['liq-pdf','liq-png','liq-csv'].forEach(id=>$(id).disabled=true);
-    $('liq-estado').textContent=`Vista previa calculada: ${liqGuias.length} guía(s), ${filas.length} corte(s), ${filas.reduce((n,f)=>n+f.paquetes,0)} paquete(s). Revisá y autorizá antes de exportar.`;
+    $('liq-estado').textContent=`Vista previa calculada: ${liqGuias.length} guía(s), ${filas.length} corte(s), ${filas.reduce((n,f)=>n+f.paquetes,0)} paquete(s). Revisá y autorizá antes de exportar o guardar.`;
   }catch(e){console.error('Liquidación',e);$('liq-estado').textContent='No se pudo calcular: '+e.message;}
   finally{btn.disabled=false;}
 }
@@ -2558,6 +2562,64 @@ function liqPNG(){
   cv.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='BioMax_Resumen_Liquidacion.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},'image/png');
 }
 
+// Historial V4: instantáneas financieras; ninguna escritura ocurre durante el cálculo.
+function liqInstantanea(){
+  return JSON.parse(JSON.stringify({version:4,guiasEntrada:liqGuias,filas:liqFilas,resumen:liqResumen,totales:liqTotales}));
+}
+async function liqGuardarHistorial(){
+  if(rolUsuario!=='admin'||!liqValido||!$('liq-aprobar').checked||liqGuardadaActual)return;
+  const btn=$('liq-guardar');btn.disabled=true;
+  try{
+    const datos=liqInstantanea();
+    const {error}=await supabase.from('liquidaciones_historial').insert({
+      titulo:datos.totales.guias.map(g=>g.numero).join(' / ').slice(0,240),
+      datos,
+    });
+    if(error)throw error;
+    liqGuardadaActual=true;
+    $('liq-historial-estado').textContent='Liquidación archivada por 30 días. No se guardan los cálculos automáticamente.';
+    await liqCargarHistorial();
+  }catch(e){alert('No se pudo guardar la liquidación: '+e.message+'\nVerificá que la migración SQL V4 esté instalada.');}
+  finally{btn.disabled=liqGuardadaActual;}
+}
+async function liqCargarHistorial(){
+  if(rolUsuario!=='admin')return;
+  const el=$('liq-historial');if(!el)return;
+  el.textContent='Consultando historial...';
+  const {data,error}=await supabase.from('liquidaciones_historial').select('id,titulo,creado_en,vence_en,datos').gt('vence_en',new Date().toISOString()).order('creado_en',{ascending:false}).limit(100);
+  if(error){el.textContent='No se pudo consultar el historial: '+error.message;return;}
+  liqHistorialCache=new Map((data||[]).map(r=>[r.id,r]));
+  el.innerHTML=data?.length?data.map(r=>`<div style="display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;padding:12px;border-bottom:1px solid #e3e8f0"><div><strong>${repTexto(r.titulo)}</strong><div class="card-desc">Guardado: ${repTexto(new Date(r.creado_en).toLocaleString('es-NI'))} · Vence: ${repTexto(new Date(r.vence_en).toLocaleDateString('es-NI'))}</div></div><button type="button" class="btn-secondary" data-liq-abrir="${r.id}">Abrir y exportar</button></div>`).join(''):'No hay liquidaciones guardadas durante los últimos 30 días.';
+}
+let liqHistorialCache=new Map();
+function liqAccionHistorial(e){
+  if(rolUsuario!=='admin')return;
+  const b=e.target.closest('[data-liq-abrir]');if(!b)return;
+  const registro=liqHistorialCache.get(b.dataset.liqAbrir);if(!registro)return;
+  const d=registro.datos;
+  if(!d||!Array.isArray(d.filas)||!Array.isArray(d.resumen)||!d.totales?.guias){alert('Registro histórico incompleto.');return;}
+  liqGuias=d.guiasEntrada||liqGuias;
+  liqSiguienteId=Math.max(2,...liqGuias.map(g=>Number(g.id)+1||2));
+  liqFilas=d.filas;liqResumen=d.resumen;liqTotales=d.totales;
+  liqValido=true;liqGuardadaActual=true;
+  $('liq-peso-guia').textContent=liqN(liqTotales.pesoGuia)+' lbs';
+  $('liq-peso-sistema').textContent=liqN(liqTotales.pesoSistema)+' lbs';
+  $('liq-diferencia').textContent=liqN(liqTotales.diferencia)+' lbs';
+  $('liq-total').textContent=liqUSD(liqTotales.cobroTotal);
+  $('liq-costo-aduana').textContent=liqUSD(liqTotales.costoAduanaTotal);
+  $('liq-ganancia').textContent=liqUSD(liqTotales.ganancia);
+  $('liq-filas').innerHTML=liqFilas.map(f=>`<tr><td>${repTexto(f.guia)}</td><td>${repTexto(f.corte)}</td><td>${repTexto(f.modalidad)}</td><td>${repTexto(f.agencia)}</td><td>${repTexto(f.maestra)}</td><td>${f.paquetes}</td><td>${liqN(f.peso)}</td><td>+${liqN(f.extra)}</td><td>${liqN(f.final)}</td><td>${liqUSD(f.tarifaAduana)}</td><td>${liqUSD(f.costoAduana)}</td><td>${liqUSD(f.tarifa)}</td><td>${liqUSD(f.total)}</td><td>${liqUSD(f.margen)}</td></tr>`).join('');
+  $('liq-resumen').innerHTML=liqResumen.map(f=>`<tr><td>${repTexto(f.maestra)}</td><td>${repTexto(f.agencia)}</td><td>${f.paquetes}</td><td>${liqN(f.final)}</td><td>${liqUSD(f.costoAduana)}</td><td>${liqUSD(f.total)}</td><td>${liqUSD(f.margen)}</td></tr>`).join('');
+  $('liq-maestras').innerHTML=['BIO','MML'].map(m=>`<tr><td><strong>${m==='BIO'?'Bring It On (BIO)':'MarMax Logistics (MML)'}</strong></td><td><strong>${liqUSD(liqFilas.filter(f=>f.maestra===m).reduce((n,f)=>n+f.costoAduana,0))}</strong></td></tr>`).join('');
+  $('liq-guias-resumen').innerHTML=liqTotales.guias.map(g=>`<tr><td>${repTexto(g.numero)}</td><td>${repTexto(g.transportista)}</td><td>${repTexto(g.cortes)}</td><td>${repTexto(g.modalidad)}</td><td>${repTexto(g.entrega)}</td><td>${repTexto(g.estado)}</td><td>${repTexto(g.condicion)}</td><td>${liqN(g.pesoGuia)}</td><td>${liqN(g.pesoSistema)}</td><td>${liqN(g.diferencia)}</td><td>${liqUSD(g.tarifaAduana)}</td><td>${liqUSD(g.costoAduana)}</td></tr>`).join('');
+  $('liq-resultados').hidden=false;
+  $('liq-aprobar').checked=true;
+  ['liq-pdf','liq-png','liq-csv'].forEach(id=>$(id).disabled=false);
+  $('liq-guardar').disabled=true; // Evitar duplicar un registro histórico por accidente.
+  $('liq-aviso').textContent='Registro histórico recuperado. Podés exportarlo, pero no volver a guardarlo desde esta vista.';
+  $('liq-estado').textContent='Historial abierto: '+registro.titulo+'. Los importes son los originales archivados.';
+  $('liq-resultados').scrollIntoView({behavior:'smooth',block:'start'});
+}
 async function initAdminDashboard() {
   const ctx = await cargarPerfilSesion();
   if (!ctx) return;
@@ -2573,6 +2635,7 @@ async function initAdminDashboard() {
   setupSolicitudesSucursal();
   setupReportesOperativos();
   setupLiquidacion();
+  if(ctx.rol === "admin") liqCargarHistorial();
 
   if (ctx.rol === "admin") {
     setupPasswordTools();

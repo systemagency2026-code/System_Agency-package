@@ -1575,7 +1575,7 @@
         </div>
       </div>
 
-      <!-- Liquidación de carga: vista previa sin escritura en base de datos -->
+      <!-- Liquidación de carga: vista previa, archivo opcional de 30 días -->
       <section id="view-liquidacion" class="dashboard-view" aria-label="Liquidación de carga" hidden>
         <article class="stat-card" style="margin-bottom:16px">
           <h3 class="card-title">Liquidación de carga por guías y cortes</h3>
@@ -1610,9 +1610,15 @@
               <button id="liq-pdf" class="btn-secondary" type="button" disabled>Imprimir / Guardar PDF</button>
               <button id="liq-png" class="btn-secondary" type="button" disabled>Descargar imagen PNG</button>
               <button id="liq-csv" class="btn-secondary" type="button" disabled>Descargar CSV</button>
+              <button id="liq-guardar" class="btn-primary" type="button" disabled>Guardar liquidación (30 días)</button>
             </div>
           </article>
         </div>
+        <article class="stat-card" style="margin-top:18px">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><h3 class="card-title">Historial de liquidaciones · últimos 30 días</h3><button id="liq-historial-actualizar" class="btn-secondary" type="button">Actualizar historial</button></div>
+          <p class="card-desc">Solo se archivan las liquidaciones que guardés expresamente. Los registros vencen a los 30 días y se eliminan automáticamente mediante la tarea programada de Supabase.</p>
+          <p id="liq-historial-estado" class="card-desc" role="status"></p><div id="liq-historial" style="margin-top:12px">Cargando historial...</div>
+        </article>
       </section>
 
       <!-- Módulo NIC → USA: pantalla inicial. No realiza escrituras en Supabase. -->
