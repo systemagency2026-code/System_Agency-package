@@ -2420,7 +2420,7 @@ async function prepararLiquidacion(){
 }
 function liqPintarMaestras(){
   const el=$('liq-config-maestras');if(!el)return;
-  el.innerHTML=[...liqAgencias.values()].sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre),'es')).map(a=>`<label style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin:6px 0"><span>${repTexto(a.nombre)}</span><select class="form-input" style="max-width:210px" data-maestra-id="${repTexto(a.id)}"><option value="">Sin asignar</option><option value="BIO" ${a.agencia_maestra==='BIO'?'selected':''}>BIO</option><option value="MML" ${a.agencia_maestra==='MML'?'selected':''}>MML</option></select></label>`).join('');
+  el.innerHTML=[...liqAgencias.values()].sort((a,b)=>(a.agencia_maestra==='BIO'?0:a.agencia_maestra==='MML'?1:2)-(b.agencia_maestra==='BIO'?0:b.agencia_maestra==='MML'?1:2)||String(a.nombre).localeCompare(String(b.nombre),'es')).map(a=>`<label style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin:6px 0"><span>${repTexto(a.nombre)}</span><select class="form-input" style="max-width:210px" data-maestra-id="${repTexto(a.id)}"><option value="">Sin asignar</option><option value="BIO" ${a.agencia_maestra==='BIO'?'selected':''}>BIO</option><option value="MML" ${a.agencia_maestra==='MML'?'selected':''}>MML</option></select></label>`).join('');
 }
 async function liqGuardarMaestra(e){const sel=e.target.closest('[data-maestra-id]');if(!sel)return;const a=liqAgencias.get(sel.dataset.maestraId);if(!a)return;const anterior=a.agencia_maestra;sel.disabled=true;const {error}=await supabase.from('agencias').update({agencia_maestra:sel.value||null}).eq('id',a.id);sel.disabled=false;if(error){sel.value=anterior||'';alert('No se pudo guardar la agencia maestra: '+error.message);return;}a.agencia_maestra=sel.value||null;liqInvalidar();$('liq-estado').textContent='Asignación guardada en Supabase. Volvé a calcular la liquidación para aplicar los cambios.';}
 function setupLiquidacion(){
@@ -2469,6 +2469,15 @@ async function liqCalcular(){
         if(!ag?.agencia_maestra)throw Error(`La agencia ${ag?.nombre||'desconocida'} no tiene agencia maestra asignada. Configurala antes de liquidar.`);const costoAduana=Math.round((p.peso+extra)*tarifaAduana*100)/100;const total=Math.round((p.peso+extra)*tarifa*100)/100;filas.push({guia:g.numero,corte:c.numero_corte||'—',modalidad:c.tipo_envio||'—',agencia:ag.nombre,maestra:ag.agencia_maestra,paquetes:p.paquetes,peso:p.peso,extra,final:p.peso+extra,tarifa,tarifaAduana,costoAduana,total,margen:Math.round((total-costoAduana)*100)/100});
       }
     }
+    // Reconciliar los centavos por guía: la suma por agencia debe coincidir con el costo real.
+    for(const guia of detallesGuias){
+      const gf=filas.filter(f=>f.guia===guia.numero);
+      const partes=gf.map((f,i)=>{const raw=f.final*f.tarifaAduana*100;return {f,i,cent:Math.floor(raw+1e-8),resto:raw-Math.floor(raw+1e-8)};});
+      let pendiente=Math.round(guia.costoAduana*100)-partes.reduce((n,x)=>n+x.cent,0);
+      if(pendiente<0||pendiente>partes.length)throw Error('No se pudo conciliar el redondeo de Aduana.');
+      partes.sort((a,b)=>b.resto-a.resto||a.i-b.i).slice(0,pendiente).forEach(x=>x.cent++);
+      partes.forEach(x=>{x.f.costoAduana=x.cent/100;x.f.margen=Math.round((x.f.total-x.f.costoAduana)*100)/100;});
+    }
     const prioridad=m=>m==='BIO'?0:m==='MML'?1:2;
     filas.sort((a,b)=>prioridad(a.maestra)-prioridad(b.maestra)||a.agencia.localeCompare(b.agencia,'es')||a.guia.localeCompare(b.guia,'es'));
     const resumen=new Map();for(const f of filas){const k=f.maestra+'|'+f.agencia;const a=resumen.get(k)||{agencia:f.agencia,maestra:f.maestra,paquetes:0,peso:0,extra:0,final:0,costoAduana:0,total:0,margen:0};for(const k of ['paquetes','peso','extra','final','costoAduana','total','margen'])a[k]+=f[k];resumen.set(k,a);}
@@ -2479,7 +2488,7 @@ async function liqCalcular(){
     $('liq-costo-aduana').textContent=liqUSD(costoAduanaTotal);$('liq-ganancia').textContent=liqUSD(liqTotales.ganancia);
     $('liq-filas').innerHTML=filas.map(f=>`<tr><td>${repTexto(f.guia)}</td><td>${repTexto(f.corte)}</td><td>${repTexto(f.modalidad)}</td><td>${repTexto(f.agencia)}</td><td>${repTexto(f.maestra)}</td><td>${f.paquetes}</td><td>${liqN(f.peso)}</td><td>+${liqN(f.extra)}</td><td>${liqN(f.final)}</td><td>${liqUSD(f.tarifaAduana)}</td><td>${liqUSD(f.costoAduana)}</td><td>${liqUSD(f.tarifa)}</td><td>${liqUSD(f.total)}</td><td>${liqUSD(f.margen)}</td></tr>`).join('');
     $('liq-resumen').innerHTML=liqResumen.map(f=>`<tr><td>${repTexto(f.maestra)}</td><td>${repTexto(f.agencia)}</td><td>${f.paquetes}</td><td>${liqN(f.final)}</td><td>${liqUSD(f.costoAduana)}</td><td>${liqUSD(f.total)}</td><td>${liqUSD(f.margen)}</td></tr>`).join('');
-    const maestras=['BIO','MML'];$('liq-maestras').innerHTML=maestras.map(m=>`<tr><td><strong>${m==='BIO'?'Bring It On (BIO)':'MarMax Logistics (MML)'}</strong></td><td><strong>${liqUSD(filas.filter(f=>f.maestra===m).reduce((n,f)=>n+f.total,0))}</strong></td></tr>`).join('');
+    const maestras=['BIO','MML'];$('liq-maestras').innerHTML=maestras.map(m=>`<tr><td><strong>${m==='BIO'?'Bring It On (BIO)':'MarMax Logistics (MML)'}</strong></td><td><strong>${liqUSD(filas.filter(f=>f.maestra===m).reduce((n,f)=>n+f.costoAduana,0))}</strong></td></tr>`).join('');
     $('liq-guias-resumen').innerHTML=detallesGuias.map(g=>`<tr><td>${repTexto(g.numero)}</td><td>${repTexto(g.transportista)}</td><td>${repTexto(g.cortes)}</td><td>${repTexto(g.modalidad)}</td><td>${repTexto(g.entrega)}</td><td>${repTexto(g.estado)}</td><td>${repTexto(g.condicion)}</td><td>${liqN(g.pesoGuia)}</td><td>${liqN(g.pesoSistema)}</td><td>${liqN(g.diferencia)}</td><td>${liqUSD(g.tarifaAduana)}</td><td>${liqUSD(g.costoAduana)}</td></tr>`).join('');
     $('liq-resultados').hidden=false;liqValido=true;$('liq-aprobar').checked=false;['liq-pdf','liq-png','liq-csv'].forEach(id=>$(id).disabled=true);
     $('liq-estado').textContent=`Vista previa calculada: ${liqGuias.length} guía(s), ${filas.length} corte(s), ${filas.reduce((n,f)=>n+f.paquetes,0)} paquete(s). Revisá y autorizá antes de exportar.`;
@@ -2491,12 +2500,63 @@ function liqExportRows(){
   liqTotales.guias.forEach(g=>r.push([g.numero,g.transportista,g.cortes,g.modalidad,g.entrega,g.estado,g.condicion,liqN(g.pesoGuia),liqN(g.pesoSistema),liqN(g.diferencia),liqUSD(g.tarifaAduana),liqUSD(g.costoAduana)]));
   r.push([],['DESGLOSE'],['Maestra','Agencia','Guía','Corte','Modalidad','Paquetes','Peso original','Adicional','Peso liquidado','Tarifa Aduana/lb','Costo Aduana','Tarifa Agencia/lb','Cobro Agencia','Margen']);
   liqFilas.forEach(f=>r.push([f.maestra,f.agencia,f.guia,f.corte,f.modalidad,f.paquetes,liqN(f.peso),liqN(f.extra),liqN(f.final),liqUSD(f.tarifaAduana),liqUSD(f.costoAduana),liqUSD(f.tarifa),liqUSD(f.total),liqUSD(f.margen)]));
-  r.push([],['COBROS POR AGENCIA MAESTRA','Total a entregar']);for(const m of ['BIO','MML'])r.push([m,liqUSD(liqFilas.filter(f=>f.maestra===m).reduce((n,f)=>n+f.total,0))]);
+  r.push([],['APORTE ADUANA POR AGENCIA MAESTRA','Total a entregar para Aduana']);for(const m of ['BIO','MML'])r.push([m,liqUSD(liqFilas.filter(f=>f.maestra===m).reduce((n,f)=>n+f.total,0))]);
   r.push([],['TOTALES GENERALES'],['Peso de guías',liqN(liqTotales.pesoGuia)+' lbs'],['Peso BioMax',liqN(liqTotales.pesoSistema)+' lbs'],['Diferencia',liqN(liqTotales.diferencia)+' lbs'],['Costo real Aduana',liqUSD(liqTotales.costoAduanaTotal)],['Total a recibir',liqUSD(liqTotales.cobroTotal)],['Ganancia / pérdida',liqUSD(liqTotales.ganancia)]);return r;
 }
 function liqCSV(){if(!liqValido||!$('liq-aprobar').checked)return;const rows=liqExportRows();const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='BioMax_Liquidacion_Carga.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-function liqPDF(){if(!liqValido||!$('liq-aprobar').checked)return;const win=window.open('','_blank');if(!win){alert('Permití las ventanas emergentes para guardar el PDF.');return;}const rows=liqExportRows();const tabla=rows.map(r=>'<tr>'+r.map(v=>`<td>${repTexto(v)}</td>`).join('')+'</tr>').join('');win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>BioMax - Liquidación</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;color:#172238}table{border-collapse:collapse;width:100%;font-size:9px}td{border:1px solid #ccd3de;padding:5px}tr:first-child{background:#dceaf9;font-weight:bold}tr{break-inside:avoid}h1{font-size:22px}</style></head><body><h1>BioMax · Liquidación de carga</h1><table>${tabla}</table><p>Resumen generado desde BioMax. Verificar datos antes de efectuar transferencias.</p></body></html>`);win.document.close();win.focus();setTimeout(()=>win.print(),350);}
-function liqPNG(){if(!liqValido||!$('liq-aprobar').checked)return;const rows=liqExportRows(),cols=Math.max(...rows.map(r=>r.length)),cellW=148,w=Math.max(1250,cols*cellW+32),rowH=34,h=115+rows.length*rowH,cv=document.createElement('canvas');cv.width=w*2;cv.height=h*2;const ctx=cv.getContext('2d');ctx.scale(2,2);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.fillStyle='#14213d';ctx.font='bold 27px Arial';ctx.fillText('BioMax · Liquidación de carga',20,40);ctx.font='14px Arial';ctx.fillText(new Date().toLocaleString('es-NI'),20,68);rows.forEach((r,i)=>{const y=100+i*rowH;ctx.fillStyle=i%2?'#f3f6fb':'#fff';ctx.fillRect(12,y-22,w-24,rowH);ctx.fillStyle='#14213d';ctx.font='12px Arial';r.forEach((v,j)=>{const str=String(v);ctx.fillText(str.length>22?str.slice(0,21)+'…':str,20+j*cellW,y);});});cv.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='BioMax_Liquidacion_Carga.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},'image/png');}
+// Resumen operativo compacto: la información comercial completa permanece en pantalla y CSV.
+function liqResumenOperativo(){
+  const grupos=['BIO','MML'].map(codigo=>{
+    const agencias=liqResumen.filter(a=>a.maestra===codigo&&a.paquetes>0);
+    const centavos=agencias.reduce((n,a)=>n+Math.round(a.costoAduana*100),0);
+    return {codigo,nombre:codigo==='BIO'?'BRING IT ON · BIO':'MARMAX LOGISTICS · MML',agencias,
+      paquetes:agencias.reduce((n,a)=>n+a.paquetes,0),centavos};
+  });
+  const totalCent=grupos.reduce((n,g)=>n+g.centavos,0);
+  if(totalCent!==Math.round(liqTotales.costoAduanaTotal*100))throw Error('Los subtotales de Aduana no coinciden con el costo real de la guía.');
+  return {guias:liqTotales.guias,grupos,totalCent,peso:liqTotales.pesoGuia};
+}
+function liqResumenHtml(){
+  const d=liqResumenOperativo();
+  const escape=v=>repTexto(String(v));
+  const guias=d.guias.map(g=>`<div class="guia"><b>${escape(g.transportista)}</b> · Guía ${escape(g.numero)} · ${escape(g.modalidad)} · Corte(s) ${escape(g.cortes)} · ${liqN(g.pesoGuia)} lbs</div>`).join('');
+  const grupos=d.grupos.map(g=>`<section><div class="grupo"><h2>${g.nombre}</h2><span>${g.paquetes} paquetes</span></div><table><thead><tr><th>Agencia</th><th class="num">Paquetes</th><th class="num">Lbs</th><th class="num">Aduana</th></tr></thead><tbody>${g.agencias.map(a=>`<tr><td>${escape(a.agencia)}</td><td class="num">${a.paquetes}</td><td class="num">${liqN(a.final)}</td><td class="num">${liqUSD(a.costoAduana)}</td></tr>`).join('')||'<tr><td colspan="4">Sin carga en esta liquidación</td></tr>'}</tbody></table><div class="subtotal"><b>TOTAL ${g.codigo} A ENTREGAR</b><strong>${liqUSD(g.centavos/100)}</strong></div></section>`).join('');
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>BioMax · Resumen de liquidación</title><style>@page{size:A4 portrait;margin:13mm}*{box-sizing:border-box}body{font:14px Arial,sans-serif;color:#1c2431;margin:0}main{max-width:760px;margin:auto}header{text-align:center;border-bottom:1px solid #d5d9df;padding:0 0 18px}h1{font-size:23px;margin:0 0 9px}.guia{font-size:12px;color:#4c5868;line-height:1.65}.fecha{font-size:11px;color:#667085;margin-top:8px}.metricas{display:flex;justify-content:space-between;gap:18px;padding:21px 12px}.metrica{width:50%}.metrica span{display:block;color:#667085;font-size:13px;margin-bottom:7px}.metrica strong{font-size:23px}section{margin-top:18px;break-inside:avoid}.grupo{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #d5d9df;padding:19px 0 12px}.grupo h2{font-size:17px;margin:0}.grupo span{font-size:12px;color:#667085}table{width:100%;border-collapse:collapse;table-layout:fixed}th{font-size:12px;text-align:left;border-bottom:1px solid #dce1e8;padding:9px 5px}td{padding:11px 5px;border-bottom:1px solid #eef0f4;font-size:14px}th:first-child{width:46%}.num{text-align:right;white-space:nowrap}.subtotal{background:#fff0b8;display:flex;justify-content:space-between;align-items:center;padding:15px;border-radius:7px;margin:13px 0 18px;gap:10px}.subtotal strong{font-size:21px}.general{display:flex;justify-content:space-between;gap:10px;border-top:2px solid #c8cdd5;padding:20px 6px;margin-top:12px;align-items:center}.general strong{font-size:24px}.nota{font-size:11px;color:#667085;text-align:center;margin-top:12px}@media print{section{break-inside:avoid}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><main><header><h1>BioMax · Resumen de liquidación</h1>${guias}<div class="fecha">Generado: ${escape(new Date().toLocaleString('es-NI'))}</div></header><div class="metricas"><div class="metrica"><span>Peso total de guía(s)</span><strong>${liqN(d.peso)} lbs</strong></div><div class="metrica"><span>Total Aduana</span><strong>${liqUSD(d.totalCent/100)}</strong></div></div>${grupos}<div class="general"><b>TOTAL GENERAL ADUANA</b><strong>${liqUSD(d.totalCent/100)}</strong></div><p class="nota">Resumen operativo de Aduana. Tarifas comerciales y márgenes disponibles en el detalle administrativo.</p></main></body></html>`;
+}
+function liqPDF(){
+  if(!liqValido||!$('liq-aprobar').checked)return;
+  let html;try{html=liqResumenHtml();}catch(e){alert(e.message);return;}
+  const win=window.open('','_blank');if(!win){alert('Permití las ventanas emergentes para guardar el PDF.');return;}
+  win.document.open();win.document.write(html);win.document.close();win.focus();setTimeout(()=>win.print(),450);
+}
+function liqPNG(){
+  if(!liqValido||!$('liq-aprobar').checked)return;
+  let d;try{d=liqResumenOperativo();}catch(e){alert(e.message);return;}
+  const w=850,pad=40,rowH=44,escala=2;
+  const guiaLines=d.guias.length;
+  const altoGrupos=d.grupos.reduce((n,g)=>n+106+Math.max(1,g.agencias.length)*rowH+72,0);
+  const h=185+guiaLines*24+altoGrupos+105;
+  if(h*escala>16000){alert('El resumen es demasiado largo para un solo PNG. Utilizá la opción PDF.');return;}
+  const cv=document.createElement('canvas');cv.width=w*escala;cv.height=h*escala;
+  const ctx=cv.getContext('2d');ctx.scale(escala,escala);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+  const ink='#1c2431',muted='#667085';let y=44;
+  function t(v,x,yy,font='16px Arial',align='left',color=ink){ctx.font=font;ctx.textAlign=align;ctx.fillStyle=color;ctx.fillText(String(v),x,yy);}
+  function line(yy){ctx.strokeStyle='#d5d9df';ctx.beginPath();ctx.moveTo(pad,yy);ctx.lineTo(w-pad,yy);ctx.stroke();}
+  t('BioMax · Resumen de liquidación',w/2,y,'bold 27px Arial','center');y+=34;
+  d.guias.forEach(g=>{t(`${g.transportista} · Guía ${g.numero} · ${g.modalidad} · Corte(s) ${g.cortes} · ${liqN(g.pesoGuia)} lbs`,w/2,y,'14px Arial','center',muted);y+=24;});
+  t('Generado: '+new Date().toLocaleString('es-NI'),w/2,y,'12px Arial','center',muted);y+=21;line(y);y+=34;
+  t('Peso total de guía(s)',pad,y,'14px Arial','left',muted);t('Total Aduana',w/2+10,y,'14px Arial','left',muted);y+=29;
+  t(liqN(d.peso)+' lbs',pad,y,'bold 26px Arial');t(liqUSD(d.totalCent/100),w/2+10,y,'bold 26px Arial');y+=36;
+  d.grupos.forEach(g=>{
+    line(y);y+=32;t(g.nombre,pad,y,'bold 19px Arial');t(g.paquetes+' paquetes',w-pad,y,'14px Arial','right',muted);y+=38;
+    t('Agencia',pad,y,'bold 14px Arial');t('Paquetes',w-345,y,'bold 14px Arial','right');t('Lbs',w-205,y,'bold 14px Arial','right');t('Aduana',w-pad,y,'bold 14px Arial','right');y+=12;line(y);y+=27;
+    if(!g.agencias.length){t('Sin carga en esta liquidación',pad,y,'14px Arial','left',muted);y+=rowH;}
+    else g.agencias.forEach(a=>{t(a.agencia,pad,y,'16px Arial');t(a.paquetes,w-345,y,'16px Arial','right');t(liqN(a.final),w-205,y,'16px Arial','right');t(liqUSD(a.costoAduana),w-pad,y,'bold 16px Arial','right');y+=rowH;});
+    ctx.fillStyle='#fff0b8';ctx.fillRect(pad,y-20,w-pad*2,57);t(`TOTAL ${g.codigo} A ENTREGAR`,pad+14,y+14,'bold 17px Arial');t(liqUSD(g.centavos/100),w-pad-14,y+14,'bold 23px Arial','right');y+=76;
+  });
+  line(y);y+=40;t('TOTAL GENERAL ADUANA',pad,y,'bold 19px Arial');t(liqUSD(d.totalCent/100),w-pad,y,'bold 26px Arial','right');
+  cv.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='BioMax_Resumen_Liquidacion.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},'image/png');
+}
 
 async function initAdminDashboard() {
   const ctx = await cargarPerfilSesion();
