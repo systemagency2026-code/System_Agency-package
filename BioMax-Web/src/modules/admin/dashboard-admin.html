@@ -1627,12 +1627,38 @@
           <h3 class="card-title">Envíos Nicaragua → Estados Unidos</h3>
           <p class="card-desc">Módulo exclusivo de carga aérea. Esta sección se implementará de forma independiente a Estados Unidos → Nicaragua.</p>
           <div class="grid-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:20px">
-            <div class="subpanel"><h4 class="subpanel__title">Registro de envíos</h4><p class="hint">Formulario por agencia, tipo de carga y peso.</p><span class="hint">Pendiente de habilitación</span></div>
+            <div class="subpanel"><h4 class="subpanel__title">Registro de envíos</h4><p class="hint">Formulario disponible para revisión abajo.</p><span class="hint">Vista preliminar</span></div>
             <div class="subpanel"><h4 class="subpanel__title">Fechas de vuelo</h4><p class="hint">Vuelos programados por Superadmin para selección de las agencias.</p><span class="hint">Pendiente de habilitación</span></div>
             <div class="subpanel"><h4 class="subpanel__title">Tarifas por agencia</h4><p class="hint">Tarifario propio de Nicaragua → Estados Unidos.</p><span class="hint">Pendiente de habilitación</span></div>
             <div class="subpanel"><h4 class="subpanel__title">Reportes de carga</h4><p class="hint">Resumen por vuelo, agencia y paquetes registrados.</p><span class="hint">Pendiente de habilitación</span></div>
           </div>
-          <p class="hint" style="margin-top:18px">Esta primera etapa solo habilita la navegación y la vista inicial; todavía no registra envíos ni modifica información.</p>
+          <p class="hint" style="margin-top:18px">El formulario siguiente es una vista preliminar; no registra envíos ni modifica información.</p>
+<article class="stat-card" style="margin-bottom:18px">
+<h3 class="card-title">Registro de envío · Nicaragua → Estados Unidos</h3>
+<p class="card-desc">Carga aérea exclusivamente. Formulario de revisión: todavía no registra envíos en Supabase.</p>
+<form id="nicusa-form" autocomplete="on">
+<div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px">
+<div class="form-field"><label class="form-label" for="nicusa-remitente">Remitente · nombre *</label><input class="form-input" id="nicusa-remitente" required maxlength="160"></div>
+<div class="form-field"><label class="form-label" for="nicusa-remitente-tel">Remitente · teléfono *</label><input class="form-input" id="nicusa-remitente-tel" type="tel" required maxlength="40"></div>
+<div class="form-field"><label class="form-label" for="nicusa-dest-nombre">Destinatario · nombre *</label><input class="form-input" id="nicusa-dest-nombre" required maxlength="100"></div>
+<div class="form-field"><label class="form-label" for="nicusa-dest-apellido">Destinatario · apellido *</label><input class="form-input" id="nicusa-dest-apellido" required maxlength="100"></div>
+<div class="form-field"><label class="form-label" for="nicusa-dest-tel">Destinatario · teléfono *</label><input class="form-input" id="nicusa-dest-tel" type="tel" required maxlength="40"></div>
+<div class="form-field"><label class="form-label" for="nicusa-calle">Dirección · calle y número *</label><input class="form-input" id="nicusa-calle" required maxlength="220"></div>
+<div class="form-field"><label class="form-label" for="nicusa-apto">Apartamento / unidad</label><input class="form-input" id="nicusa-apto" maxlength="80"></div>
+<div class="form-field"><label class="form-label" for="nicusa-ciudad">Ciudad *</label><input class="form-input" id="nicusa-ciudad" required maxlength="100"></div>
+<div class="form-field"><label class="form-label" for="nicusa-estado">Estado (EE. UU.) *</label><input class="form-input" id="nicusa-estado" required maxlength="80"></div>
+<div class="form-field"><label class="form-label" for="nicusa-zip">ZIP *</label><input class="form-input" id="nicusa-zip" required inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="33126 o 33126-1234"></div>
+<div class="form-field"><label class="form-label" for="nicusa-vuelo">Fecha de vuelo *</label><select class="form-input" id="nicusa-vuelo" required disabled><option value="">Pendiente: SuperAdmin debe publicar vuelos</option></select></div>
+<div class="form-field"><label class="form-label" for="nicusa-categoria">Tipo de carga *</label><select class="form-input" id="nicusa-categoria" required disabled><option value="">Pendiente: catálogo y tarifas aprobados</option></select></div>
+<div class="form-field"><label class="form-label" for="nicusa-peso">Peso real (lbs) *</label><input class="form-input" id="nicusa-peso" type="number" min="0.01" step="any" inputmode="decimal" placeholder="Ej. 2.74" required></div>
+<div class="form-field"><label class="form-label" for="nicusa-peso-facturable">Peso facturable (lbs)</label><output id="nicusa-peso-facturable" style="display:block;font-size:1.5rem;font-weight:750;padding:8px 0">—</output></div>
+</div>
+<div class="form-field" style="margin-top:14px"><label class="form-label" for="nicusa-inventario">Inventario detallado (artículo y cantidad) *</label><textarea class="form-input" id="nicusa-inventario" rows="4" required placeholder="Ej. 2 camisas, 1 libro"></textarea></div>
+<div class="form-field" style="margin-top:14px"><label class="form-label" for="nicusa-foto">Foto de los artículos fuera del paquete *</label><input class="form-input" id="nicusa-foto" type="file" accept="image/jpeg,image/png,image/webp" required><p class="hint">La fotografía no se carga ni se almacena en esta etapa.</p></div>
+<div class="form-field" style="margin-top:14px"><label class="form-label" for="nicusa-notas">Observaciones</label><textarea class="form-input" id="nicusa-notas" rows="2" placeholder="Opcional; pendiente de confirmar obligatoriedad"></textarea></div>
+<p id="nicusa-aviso" class="hint" role="status" style="margin-top:16px">Vista preliminar: no se guardan datos ni se generan cobros.</p>
+<button class="btn-primary" type="button" disabled title="Se habilitará al configurar vuelos, tarifas y permisos en Supabase">Registrar envío (próxima etapa)</button>
+</form></article>
         </article>
       </section>
 
@@ -1663,5 +1689,6 @@
     </main>
 
     <script type="module" src="dashboard-admin.js"></script>
-  </body>
+  <script src="nicusa-form-preview.js" defer></script>
+</body>
 </html>
