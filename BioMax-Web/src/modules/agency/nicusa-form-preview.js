@@ -24,9 +24,10 @@
         const dato = catalogo[categoria];
         const valor = input.value.trim();
         valores[categoria] = valor;
-        const numero = Number(valor.replace(",", "."));
+        const formatoValido = /^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(valor);
+        const numero = formatoValido ? Number(valor.replace(",", ".")) : NaN;
         const output = document.getElementById("nicusa-calc-" + categoria);
-        if (!valor || !Number.isFinite(numero) || numero <= 0 || (dato.unidad === "unidades" && !Number.isInteger(numero))) {
+        if (!valor || !formatoValido || !Number.isFinite(numero) || numero <= 0 || (dato.unidad === "unidades" && !Number.isInteger(numero))) {
           if (output) output.textContent = dato.unidad === "pendiente" ? "Regla pendiente" : "—";
           return;
         }
@@ -63,9 +64,10 @@
           input.className = "form-input";
           input.id = id;
           input.dataset.categoria = categoria;
-          input.type = "number";
-          input.min = dato.unidad === "unidades" ? "1" : "0.01";
-          input.step = dato.unidad === "unidades" ? "1" : "any";
+          input.type = "text";
+          input.autocomplete = "off";
+          
+          input.pattern = dato.unidad === "unidades" ? "[0-9]+" : "[0-9]+([.,][0-9]+)?";
           input.inputMode = dato.unidad === "unidades" ? "numeric" : "decimal";
           input.placeholder = dato.unidad === "unidades" ? "Ej. 2" : "Ej. 2.74";
           input.value = valores[categoria] || "";
