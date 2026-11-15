@@ -451,11 +451,11 @@ async function cargarDashboardResumen() {
     const agVista = getAgenciaVistaActual();
 
     const [
-      { data: agencias },
-      { data: solicitudes },
-      { data: cortes },
-      { count: countBultos },
-      { count: countSolSuc },
+      { data: agencias, error: errorAgencias },
+      { data: solicitudes, error: errorSolicitudes },
+      { data: cortes, error: errorCortes },
+      { count: countBultos, error: errorBultos },
+      { count: countSolSuc, error: errorSolSuc },
     ] = await Promise.all([
       supabase.from("agencias").select("*"),
       supabase
@@ -481,9 +481,16 @@ async function cargarDashboardResumen() {
       );
     }
 
-    const agenciasActivas = agenciasCache.filter(
-      (a) => (a.estado || "activo") === "activo",
+    // No confundir una consulta fallida con un conteo real de cero.
+    const agenciasActivas = errorAgencias ? null : agenciasCache.filter(
+      (a) => String(a.estado ?? "").trim().toLowerCase() === "activo" ||
+             String(a.estado ?? "").trim().toLowerCase() === "activa",
     ).length;
+    if (errorAgencias) console.error("Error al contar agencias activas:", errorAgencias);
+    if (errorBultos) console.error("Error al contar bultos:", errorBultos);
+    if (errorCortes) console.error("Error al cargar cortes para saldos:", errorCortes);
+    if (errorSolicitudes) console.error("Error al cargar solicitudes:", errorSolicitudes);
+    if (errorSolSuc) console.error("Error al contar solicitudes de sucursal:", errorSolSuc);
 
     const pendientesAfil = solicitudes?.length ?? 0;
     const pendientesSuc = countSolSuc ?? 0;
@@ -551,16 +558,16 @@ async function cargarDashboardResumen() {
 
     // Actualizar tarjetas
     if ($("stat-agencias"))
-      $("stat-agencias").textContent = String(agenciasActivas);
+      $("stat-agencias").textContent = agenciasActivas === null ? "—" : String(agenciasActivas);
     if ($("stat-solicitudes"))
       $("stat-solicitudes").textContent = String(pendientesSol);
     if ($("stat-cortes")) $("stat-cortes").textContent = String(abiertos);
     if ($("stat-bultos"))
-      $("stat-bultos").textContent = String(countBultos ?? 0);
+      $("stat-bultos").textContent = errorBultos || countBultos == null ? "—" : String(countBultos);
     if ($("stat-ingresos-30"))
       $("stat-ingresos-30").textContent = formatMoney(ingresos30);
     if ($("stat-saldo-cobrar"))
-      $("stat-saldo-cobrar").textContent = formatMoney(saldoCobrar);
+      $("stat-saldo-cobrar").textContent = errorCortes ? "—" : formatMoney(saldoCobrar);
 
     // Ordenar las fechas y renderizar el gráfico
     const labels = Object.keys(porDia).sort();
@@ -579,6 +586,9 @@ async function cargarDashboardResumen() {
     renderActividadReciente(listaCortes);
   } catch (err) {
     console.error("Error dashboard resumen:", err);
+    for (const id of ["stat-agencias", "stat-bultos", "stat-saldo-cobrar"]) {
+      if ($(id)) $(id).textContent = "—";
+    }
   }
 }
 
