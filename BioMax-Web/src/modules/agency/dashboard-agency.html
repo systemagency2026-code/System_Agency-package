@@ -209,7 +209,8 @@
         <section id="view-nic-usa-agencia" class="dashboard-view" aria-label="Nicaragua a Estados Unidos" hidden>
 <article class="stat-card" style="margin-bottom:18px">
 <h3 class="card-title">Registro de envío · Nicaragua → Estados Unidos</h3>
-<p class="card-desc">Carga aérea exclusivamente. Formulario de revisión: todavía no registra envíos en Supabase.</p>
+<p class="card-desc">Carga aérea exclusivamente. Registro conectado a Supabase, con historial consultable.</p>
+<div id="nicusa-confirmacion" role="alert" aria-live="assertive" hidden style="padding:18px;margin:16px 0;border:2px solid #15803d;border-radius:12px;background:#f0fdf4;color:#14532d;font-weight:650"></div>
 <form id="nicusa-form" autocomplete="on">
 
 <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px">
@@ -223,8 +224,8 @@
 <div class="form-field"><label class="form-label" for="nicusa-estado">Estado (EE. UU.) *</label><input class="form-input" id="nicusa-estado" required maxlength="80"></div>
 <div class="form-field"><label class="form-label" for="nicusa-zip">ZIP *</label><input class="form-input" id="nicusa-zip" required inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="33126 o 33126-1234"></div>
 <div class="form-field"><label class="form-label" for="nicusa-vuelo">Fecha de vuelo *</label><select class="form-input" id="nicusa-vuelo" required disabled><option value="">Pendiente: SuperAdmin debe publicar vuelos</option></select></div>
-<div class="form-field"><span class="form-label" id="nicusa-categoria-label">Tipos de carga (podés elegir varios) *</span><fieldset id="nicusa-categorias" aria-labelledby="nicusa-categoria-label" style="border:1px solid #dbe3ed;border-radius:12px;padding:12px;display:grid;gap:9px"><legend style="font-size:0.8rem">Selección preliminar</legend><label><input type="checkbox" name="nicusa-categoria" value="general"> Carga general</label><label><input type="checkbox" name="nicusa-categoria" value="medicamentos"> Medicamentos</label><label><input type="checkbox" name="nicusa-categoria" value="documentos"> Documentos</label><label><input type="checkbox" name="nicusa-categoria" value="otros"> Otros (pendiente de definir)</label></fieldset><p class="hint">Categorías ilustrativas, no son el tarifario aprobado. Se podrán combinar; las tarifas y el peso por categoría se configurarán después.</p><p class="hint" id="nicusa-categorias-seleccionadas" aria-live="polite">Ninguna categoría seleccionada.</p></div>
-<div class="form-field" style="grid-column:1/-1"><label class="form-label">Peso o cantidad por tipo de carga</label><div id="nicusa-detalle-cargas" style="display:grid;gap:12px" aria-live="polite"></div><p class="hint">Cada tipo de carga tiene su propio peso o cantidad. Documentos se registra por unidad. Las tarifas se habilitarán después.</p></div>
+<div class="form-field"><span class="form-label" id="nicusa-categoria-label">Tipos de carga (podés elegir varios) *</span><fieldset id="nicusa-categorias" aria-labelledby="nicusa-categoria-label" style="border:1px solid #dbe3ed;border-radius:12px;padding:12px;display:grid;gap:9px"><legend style="font-size:0.8rem">Selección preliminar</legend><label><input type="checkbox" name="nicusa-categoria" value="general"> Carga general</label><label><input type="checkbox" name="nicusa-categoria" value="medicamentos"> Medicamentos</label><label><input type="checkbox" name="nicusa-categoria" value="documentos"> Documentos</label><label><input type="checkbox" name="nicusa-categoria" value="otros"> Otros (pendiente de definir)</label></fieldset><p class="hint">Podés combinar categorías. El importe se calcula con el tarifario vigente de la agencia.</p><p class="hint" id="nicusa-categorias-seleccionadas" aria-live="polite">Ninguna categoría seleccionada.</p></div>
+<div class="form-field" style="grid-column:1/-1"><label class="form-label">Peso o cantidad por tipo de carga</label><div id="nicusa-detalle-cargas" style="display:grid;gap:12px" aria-live="polite"></div><p class="hint">Cada tipo de carga tiene su propio peso o cantidad. Documentos se registra por unidad.</p></div>
 <div class="form-field"><label class="form-label">Peso real total de categorías por libra</label><output id="nicusa-peso-real-total" style="display:block;font-size:1.5rem;font-weight:750;padding:8px 0">—</output></div>
 <div class="form-field"><label class="form-label">Peso facturable total (suma por categoría)</label><output id="nicusa-peso-facturable" style="display:block;font-size:1.5rem;font-weight:750;padding:8px 0">—</output></div>
 </div>
@@ -234,6 +235,19 @@
 <p id="nicusa-aviso" class="hint" role="status" style="margin-top:16px">V7: esperando vuelos y configuración de Supabase.</p>
 <button class="btn-primary" type="submit" disabled>Registrar envío</button>
 </form></article>
+<article class="stat-card" id="nicusa-historial" style="margin-top:20px">
+<h3 class="card-title">Historial de envíos · Nicaragua → Estados Unidos</h3>
+<p class="card-desc">Consultá registros guardados. Se muestran hasta 200 envíos recientes; los filtros se aplican a esos resultados.</p>
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin:14px 0">
+<label class="form-field">Buscar destinatario o referencia<input class="form-input" id="nicusa-hist-buscar" placeholder="Nombre o referencia"></label>
+<label class="form-field">Vuelo<select class="form-input" id="nicusa-hist-vuelo"><option value="">Todos los vuelos</option></select></label>
+
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn-secondary" id="nicusa-hist-recargar">Actualizar historial</button><button type="button" class="btn-secondary" id="nicusa-hist-csv" disabled>Exportar CSV para Excel</button></div>
+<p class="hint" id="nicusa-hist-estado" role="status">Cargando historial…</p>
+<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:left" id="nicusa-hist-tabla"><thead><tr><th>Referencia</th><th>Vuelo</th><th>Destinatario</th><th>Peso real</th><th>Peso facturable</th><th>Importe</th><th>Detalle</th></tr></thead><tbody></tbody></table></div>
+<div id="nicusa-hist-detalle" hidden style="margin-top:16px;padding:16px;border:1px solid #cbd5e1;border-radius:12px" aria-live="polite"></div>
+</article>
 </section>
         <section
           id="view-resumen-agente"
@@ -1353,6 +1367,7 @@
       #consulta-resumen-agencia strong {color:#101b32;font-size:17px}
     </style>
 <script src="nicusa-form-preview.js" defer></script>
+<script src="nicusa-historial.js" defer></script>
     <script type="module" src="dashboard-agency.js"></script>
   </body>
 </html>
