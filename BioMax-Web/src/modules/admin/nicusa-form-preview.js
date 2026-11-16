@@ -167,6 +167,8 @@
       if(!foto || !['image/jpeg','image/png','image/webp'].includes(foto.type) || foto.size>5242880) { aviso.textContent='La foto debe ser JPG, PNG o WebP y máximo 5 MB.';return; }
       if(boton) boton.disabled=true;
       aviso.textContent='Registrando envío…';
+      const confirmacion = document.getElementById('nicusa-confirmacion');
+      if (confirmacion) confirmacion.hidden = true;
       try {
         const {data:{user},error:authError}=await sb.auth.getUser();
         if(authError || !user) throw new Error('Sesión no válida');
@@ -187,6 +189,13 @@
         const {data,error}=await sb.from('nicusa_envios').insert(envio).select('id,importe_agencia').single();
         if(error) throw error;
         aviso.textContent='Envío registrado correctamente. Referencia: '+data.id.slice(0,8)+' · Importe: US$'+Number(data.importe_agencia).toFixed(2);
+        const confirmacion = document.getElementById('nicusa-confirmacion');
+        if (confirmacion) {
+          confirmacion.textContent = '✓ ENVÍO REGISTRADO CORRECTAMENTE · Referencia: '+data.id.slice(0,8).toUpperCase()+' · Importe: US$'+Number(data.importe_agencia).toFixed(2)+'. Podés consultarlo en el historial de esta misma página.';
+          confirmacion.hidden = false;
+          confirmacion.scrollIntoView({behavior:'smooth',block:'center'});
+        }
+        window.dispatchEvent(new CustomEvent('biomax:nicusa-registrado'));
         form.reset(); renderizar();
       } catch(e) { aviso.textContent='No se pudo registrar: '+e.message; }
       finally { if(boton) boton.disabled=false; }
