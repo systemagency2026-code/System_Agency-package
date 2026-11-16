@@ -16,9 +16,41 @@
     if (!grupo || !detalle || !estado || !real || !facturable || grupo.dataset.nicusaReady) return;
     grupo.dataset.nicusaReady = "1";
     const valores = Object.create(null);
+    const tarifas = Object.create(null);
+    let agenciaTarifada = '';
+    let solicitudTarifa = 0;
+    const importe = document.getElementById('nicusa-importe-total');
+    const estadoTarifa = document.getElementById('nicusa-estado-tarifas');
+    const dinero = n => 'US$' + n.toFixed(2);
+    async function cargarTarifas(agenciaId) {
+      const actual = ++solicitudTarifa;
+      agenciaTarifada = '';
+      Object.keys(tarifas).forEach(k => delete tarifas[k]);
+      if (importe) importe.textContent = '—';
+      if (!agenciaId) {
+        if (estadoTarifa) estadoTarifa.textContent = 'Seleccioná una agencia para consultar su tarifario.';
+        recalcular(); return;
+      }
+      if (estadoTarifa) estadoTarifa.textContent = 'Consultando tarifas de la agencia…';
+      const {data,error} = await sb.from('nicusa_tarifas_agencia')
+        .select('categoria,precio,unidad').eq('agencia_id',agenciaId).limit(10);
+      if (actual !== solicitudTarifa) return;
+      if (error) {
+        if (estadoTarifa) estadoTarifa.textContent = 'No se pudieron consultar las tarifas: ' + error.message;
+        recalcular(); return;
+      }
+      (data || []).forEach(t => { tarifas[t.categoria] = t; });
+      agenciaTarifada = agenciaId;
+      if (estadoTarifa) estadoTarifa.textContent = (data || []).length
+        ? 'Tarifas vigentes de la agencia seleccionada.'
+        : 'Esta agencia todavía no tiene tarifas configuradas.';
+      recalcular();
+    }
     const redondear = n => Math.ceil(n * 2 - 1e-9) / 2;
     function recalcular() {
-      let totalReal = 0, totalFacturable = 0, pesosValidos = 0;
+      let totalReal = 0, totalFacturable = 0, pesosValidos = 0, totalImporte = 0;
+      let faltanTarifas = false;
+      const seleccionadas = [...grupo.querySelectorAll('input[type="checkbox"]:checked')].map(e => e.value);
       detalle.querySelectorAll("input[data-categoria]").forEach(input => {
         const categoria = input.dataset.categoria;
         const dato = catalogo[categoria];
@@ -31,18 +63,32 @@
           if (output) output.textContent = dato.unidad === "pendiente" ? "Regla pendiente" : "—";
           return;
         }
+        const tarifa = tarifas[categoria];
+        const unidadEsperada = dato.unidad === 'lbs' ? 'lb' : 'unidad';
+        if (!tarifa || tarifa.unidad !== unidadEsperada || !Number.isFinite(Number(tarifa.precio))) faltanTarifas = true;
         if (dato.unidad === "lbs") {
           const fact = redondear(numero);
           totalReal += numero;
           totalFacturable += fact;
           pesosValidos++;
-          if (output) output.textContent = fact.toFixed(2) + " lbs facturables";
-        } else if (output) {
-          output.textContent = numero + " unidad(es)";
+          if (tarifa && tarifa.unidad === 'lb' && Number.isFinite(Number(tarifa.precio))) {
+            const subtotal = Math.round(fact * Number(tarifa.precio) * 100) / 100;
+            totalImporte += subtotal;
+            if (output) output.textContent = fact.toFixed(2) + ' lbs × ' + dinero(Number(tarifa.precio)) + '/lb = ' + dinero(subtotal);
+          } else if (output) output.textContent = fact.toFixed(2) + ' lbs facturables · tarifa pendiente';
+        } else {
+          if (tarifa && tarifa.unidad === 'unidad' && Number.isFinite(Number(tarifa.precio))) {
+            const subtotal = Math.round(numero * Number(tarifa.precio) * 100) / 100;
+            totalImporte += subtotal;
+            if (output) output.textContent = numero + ' unidad(es) × ' + dinero(Number(tarifa.precio)) + ' = ' + dinero(subtotal);
+          } else if (output) output.textContent = numero + ' unidad(es) · tarifa pendiente';
         }
       });
       real.textContent = pesosValidos ? totalReal.toFixed(2) + " lbs" : "—";
       facturable.textContent = pesosValidos ? totalFacturable.toFixed(2) + " lbs" : "—";
+      if (importe) importe.textContent = seleccionadas.length && !faltanTarifas && agenciaTarifada &&
+        seleccionadas.every(c => c !== 'otros' && valores[c] && Number(valores[c].replace(',', '.')) > 0)
+        ? dinero(totalImporte) : '—';
     }
     function renderizar() {
       const seleccionadas = [...grupo.querySelectorAll('input[type="checkbox"]:checked')].map(e => e.value);
@@ -111,6 +157,12 @@
         if(!(num>0) || (check.value==='documentos'&&!Number.isInteger(num))) { aviso.textContent='Revisá los pesos y las unidades de documentos.';return; }
         categorias[check.value]=num;
       }
+      const agenciaSeleccionada = document.getElementById('nicusa-agencia-admin')?.value || agenciaTarifada;
+      if (!agenciaSeleccionada || agenciaSeleccionada !== agenciaTarifada ||
+          checks.some(c => !tarifas[c.value] || tarifas[c.value].unidad !== (c.value === 'documentos' ? 'unidad' : 'lb'))) {
+        aviso.textContent = 'No se puede registrar sin las tarifas vigentes de la agencia. Revisá el tarifario.';
+        return;
+      }
       const foto=document.getElementById('nicusa-foto').files[0];
       if(!foto || !['image/jpeg','image/png','image/webp'].includes(foto.type) || foto.size>5242880) { aviso.textContent='La foto debe ser JPG, PNG o WebP y máximo 5 MB.';return; }
       if(boton) boton.disabled=true;
@@ -146,6 +198,20 @@
       (data||[]).forEach(a=>sel.add(new Option(a.nombre,a.id)));
     });
     if (sb) cargarVuelos();
+    const selectorAgencia = document.getElementById('nicusa-agencia-admin');
+    if (selectorAgencia) {
+      selectorAgencia.addEventListener('change', () => cargarTarifas(selectorAgencia.value));
+    } else if (sb) {
+      sb.auth.getUser().then(async ({data,error}) => {
+        if (error || !data?.user) { if (estadoTarifa) estadoTarifa.textContent = 'Sesión no disponible.'; return; }
+        const {data:perfil,error:err} = await sb.from('perfiles').select('agencia_id,activo').eq('id',data.user.id).single();
+        if (err || !perfil?.activo || !perfil.agencia_id) {
+          if (estadoTarifa) estadoTarifa.textContent = 'No se pudo identificar la agencia.';
+          return;
+        }
+        cargarTarifas(perfil.agencia_id);
+      });
+    }
     grupo.addEventListener("change", renderizar);
     renderizar();
   }
