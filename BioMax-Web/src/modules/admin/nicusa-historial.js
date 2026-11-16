@@ -41,7 +41,19 @@
         if(!ventana){estado.textContent='Permití ventanas emergentes para imprimir la etiqueta.';return;}
         ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Etiqueta ${esc(ref(r))}</title><style>
 @page{size:4in 6in;margin:0}*{box-sizing:border-box}body{margin:0;color:#111;font-family:Arial,sans-serif}.etiqueta{width:4in;height:6in;padding:.22in;display:flex;flex-direction:column;border:1px solid #222}.logo-agencia{display:block;max-width:2.9in;max-height:1.15in;object-fit:contain;margin:0 auto 8px}.agencia{font-size:19pt;font-weight:800;text-align:center;border-bottom:2px solid #111;padding-bottom:9px;overflow-wrap:anywhere}.ref{text-align:center;font-size:10pt;padding:10px 0}.sub{font-size:9pt;font-weight:700;text-transform:uppercase;margin:12px 0 4px}.dest{font-size:19pt;font-weight:800;overflow-wrap:anywhere}.dir{font-size:14pt;line-height:1.3;overflow-wrap:anywhere}.zip{font-size:17pt;font-weight:800;margin-top:7px;overflow-wrap:anywhere}.peso{margin-top:15px;border-top:1px solid #222;padding-top:9px;font-size:13pt}.pie{margin-top:auto;text-align:center;border-top:1px solid #222;padding-top:9px;font-size:8pt}@media screen{body{background:#ddd;padding:12px}.etiqueta{background:#fff;margin:auto}}@media print{body{padding:0}.etiqueta{border:0}}</style></head><body><div class="etiqueta">${logoAgencia?`<img class="logo-agencia" src="${esc(logoAgencia)}" alt="Logo de ${esc(nombreAgencia)}">`:``}<div class="agencia">${esc(nombreAgencia)}</div><div class="ref">Referencia: ${esc(ref(r))}</div><div class="sub">Destinatario</div><div class="dest">${esc(r.destinatario)}</div><div class="sub">Dirección de entrega</div><div class="dir">${esc(r.calle)}${r.apartamento?'<div>'+esc(r.apartamento)+'</div>':''}</div><div class="zip">${esc([r.ciudad,r.estado,r.zip].filter(Boolean).join(', '))}</div><div class="pie">Gracias por confiar en BioMax Logistics</div></div></body></html>`);
-        ventana.document.close();ventana.focus();ventana.print();
+        ventana.document.close();ventana.focus();
+        const imagenLogo=ventana.document.querySelector('.logo-agencia');
+        if(imagenLogo){
+          if(imagenLogo.complete){
+            if(imagenLogo.naturalWidth>0) ventana.print();
+            else estado.textContent='El logo registrado no pudo cargarse. Revisá la URL del logo en la ficha de agencia.';
+          }else{
+            imagenLogo.addEventListener('load',()=>ventana.print(),{once:true});
+            imagenLogo.addEventListener('error',()=>{estado.textContent='No se pudo cargar el logo de la agencia. Revisá su enlace.';},{once:true});
+          }
+        }else{
+          estado.textContent='La agencia no tiene un logo URL válido disponible para la etiqueta.';
+        }
       });
       detalle.append(imprimir);
       detalle.scrollIntoView({behavior:'smooth',block:'nearest'});
