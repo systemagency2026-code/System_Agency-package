@@ -28,6 +28,20 @@
       const dl=document.createElement('dl');dl.style.cssText='display:grid;grid-template-columns:minmax(130px,200px) 1fr;gap:8px;white-space:pre-wrap;overflow-wrap:anywhere';
       for(const [k,v] of campos){const dt=document.createElement('dt');dt.textContent=k;dt.style.fontWeight='700';const dd=document.createElement('dd');dd.textContent=v??'—';dd.style.margin='0';dl.append(dt,dd);}detalle.append(dl);
       if(r.foto_ruta){const b=document.createElement('button');b.type='button';b.className='btn-secondary';b.textContent='Ver fotografía privada';b.addEventListener('click',async()=>{b.disabled=true;try{const {data,error}=await sb.storage.from('nicusa-fotos').createSignedUrl(r.foto_ruta,60);if(error)throw error;window.open(data.signedUrl,'_blank','noopener,noreferrer');}catch(e){estado.textContent='No se pudo abrir la foto: '+e.message;}finally{b.disabled=false;}});detalle.append(b);}
+      // Etiqueta de 4 × 6 pulgadas: sin tarifas ni costos del transportador.
+      const imprimir=document.createElement('button');
+      imprimir.type='button';imprimir.className='btn-secondary';
+      imprimir.textContent='Imprimir etiqueta 4 × 6 / Guardar PDF';
+      imprimir.addEventListener('click',()=>{
+        const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const nombreAgencia=agencias.get(r.agencia_id)||'Agencia';
+        const ventana=window.open('','_blank','width=540,height=820');
+        if(!ventana){estado.textContent='Permití ventanas emergentes para imprimir la etiqueta.';return;}
+        ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Etiqueta ${esc(ref(r))}</title><style>
+@page{size:4in 6in;margin:0}*{box-sizing:border-box}body{margin:0;color:#111;font-family:Arial,sans-serif}.etiqueta{width:4in;height:6in;padding:.22in;display:flex;flex-direction:column;border:1px solid #222}.agencia{font-size:19pt;font-weight:800;text-align:center;border-bottom:2px solid #111;padding-bottom:9px;overflow-wrap:anywhere}.ref{text-align:center;font-size:10pt;padding:10px 0}.sub{font-size:9pt;font-weight:700;text-transform:uppercase;margin:12px 0 4px}.dest{font-size:19pt;font-weight:800;overflow-wrap:anywhere}.dir{font-size:14pt;line-height:1.3;overflow-wrap:anywhere}.zip{font-size:17pt;font-weight:800;margin-top:7px;overflow-wrap:anywhere}.peso{margin-top:15px;border-top:1px solid #222;padding-top:9px;font-size:13pt}.pie{margin-top:auto;text-align:center;border-top:1px solid #222;padding-top:9px;font-size:8pt}@media screen{body{background:#ddd;padding:12px}.etiqueta{background:#fff;margin:auto}}@media print{body{padding:0}.etiqueta{border:0}}</style></head><body><div class="etiqueta"><div class="agencia">${esc(nombreAgencia)}</div><div class="ref">Referencia: ${esc(ref(r))}</div><div class="sub">Destinatario</div><div class="dest">${esc(r.destinatario)}</div><div class="sub">Dirección de entrega</div><div class="dir">${esc(r.calle)}${r.apartamento?'<div>'+esc(r.apartamento)+'</div>':''}</div><div class="zip">${esc([r.ciudad,r.estado,r.zip].filter(Boolean).join(', '))}</div><div class="peso"><strong>Peso real:</strong> ${esc(peso(r.peso_real_agencia))}</div><div class="pie">Gracias por confiar en BioMax Logistics</div></div></body></html>`);
+        ventana.document.close();ventana.focus();ventana.print();
+      });
+      detalle.append(imprimir);
       detalle.scrollIntoView({behavior:'smooth',block:'nearest'});
     }
     function render() {
