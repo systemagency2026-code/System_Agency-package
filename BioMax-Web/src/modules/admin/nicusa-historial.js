@@ -10,7 +10,7 @@
     const agenciaFiltro = document.getElementById('nicusa-hist-agencia');
     const detalle = document.getElementById('nicusa-hist-detalle');
     const csv = document.getElementById('nicusa-hist-csv');
-    let registros = [], agencias = new Map(), vuelos = new Map(), admin = false;
+    let registros = [], agencias = new Map(), logosAgencias = new Map(), vuelos = new Map(), admin = false;
     const money = v => 'US$' + Number(v || 0).toFixed(2);
     const peso = v => v == null ? '—' : Number(v).toFixed(2) + ' lbs';
     const celda = (tr, value) => { const td = tr.insertCell(); td.textContent = String(value ?? '—'); td.style.cssText='padding:10px;border-bottom:1px solid #e2e8f0;white-space:nowrap'; return td; };
@@ -35,10 +35,12 @@
       imprimir.addEventListener('click',()=>{
         const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         const nombreAgencia=agencias.get(r.agencia_id)||'Agencia';
+        const logoRaw=logosAgencias.get(r.agencia_id)||'';
+        const logoAgencia=/^https:\/\//i.test(logoRaw)?logoRaw:'';
         const ventana=window.open('','_blank','width=540,height=820');
         if(!ventana){estado.textContent='Permití ventanas emergentes para imprimir la etiqueta.';return;}
         ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Etiqueta ${esc(ref(r))}</title><style>
-@page{size:4in 6in;margin:0}*{box-sizing:border-box}body{margin:0;color:#111;font-family:Arial,sans-serif}.etiqueta{width:4in;height:6in;padding:.22in;display:flex;flex-direction:column;border:1px solid #222}.agencia{font-size:19pt;font-weight:800;text-align:center;border-bottom:2px solid #111;padding-bottom:9px;overflow-wrap:anywhere}.ref{text-align:center;font-size:10pt;padding:10px 0}.sub{font-size:9pt;font-weight:700;text-transform:uppercase;margin:12px 0 4px}.dest{font-size:19pt;font-weight:800;overflow-wrap:anywhere}.dir{font-size:14pt;line-height:1.3;overflow-wrap:anywhere}.zip{font-size:17pt;font-weight:800;margin-top:7px;overflow-wrap:anywhere}.peso{margin-top:15px;border-top:1px solid #222;padding-top:9px;font-size:13pt}.pie{margin-top:auto;text-align:center;border-top:1px solid #222;padding-top:9px;font-size:8pt}@media screen{body{background:#ddd;padding:12px}.etiqueta{background:#fff;margin:auto}}@media print{body{padding:0}.etiqueta{border:0}}</style></head><body><div class="etiqueta"><div class="agencia">${esc(nombreAgencia)}</div><div class="ref">Referencia: ${esc(ref(r))}</div><div class="sub">Destinatario</div><div class="dest">${esc(r.destinatario)}</div><div class="sub">Dirección de entrega</div><div class="dir">${esc(r.calle)}${r.apartamento?'<div>'+esc(r.apartamento)+'</div>':''}</div><div class="zip">${esc([r.ciudad,r.estado,r.zip].filter(Boolean).join(', '))}</div><div class="peso"><strong>Peso real:</strong> ${esc(peso(r.peso_real_agencia))}</div><div class="pie">Gracias por confiar en BioMax Logistics</div></div></body></html>`);
+@page{size:4in 6in;margin:0}*{box-sizing:border-box}body{margin:0;color:#111;font-family:Arial,sans-serif}.etiqueta{width:4in;height:6in;padding:.22in;display:flex;flex-direction:column;border:1px solid #222}.logo-agencia{display:block;max-width:2.9in;max-height:1.15in;object-fit:contain;margin:0 auto 8px}.agencia{font-size:19pt;font-weight:800;text-align:center;border-bottom:2px solid #111;padding-bottom:9px;overflow-wrap:anywhere}.ref{text-align:center;font-size:10pt;padding:10px 0}.sub{font-size:9pt;font-weight:700;text-transform:uppercase;margin:12px 0 4px}.dest{font-size:19pt;font-weight:800;overflow-wrap:anywhere}.dir{font-size:14pt;line-height:1.3;overflow-wrap:anywhere}.zip{font-size:17pt;font-weight:800;margin-top:7px;overflow-wrap:anywhere}.peso{margin-top:15px;border-top:1px solid #222;padding-top:9px;font-size:13pt}.pie{margin-top:auto;text-align:center;border-top:1px solid #222;padding-top:9px;font-size:8pt}@media screen{body{background:#ddd;padding:12px}.etiqueta{background:#fff;margin:auto}}@media print{body{padding:0}.etiqueta{border:0}}</style></head><body><div class="etiqueta">${logoAgencia?`<img class="logo-agencia" src="${esc(logoAgencia)}" alt="Logo de ${esc(nombreAgencia)}">`:``}<div class="agencia">${esc(nombreAgencia)}</div><div class="ref">Referencia: ${esc(ref(r))}</div><div class="sub">Destinatario</div><div class="dest">${esc(r.destinatario)}</div><div class="sub">Dirección de entrega</div><div class="dir">${esc(r.calle)}${r.apartamento?'<div>'+esc(r.apartamento)+'</div>':''}</div><div class="zip">${esc([r.ciudad,r.estado,r.zip].filter(Boolean).join(', '))}</div><div class="pie">Gracias por confiar en BioMax Logistics</div></div></body></html>`);
         ventana.document.close();ventana.focus();ventana.print();
       });
       detalle.append(imprimir);
@@ -60,9 +62,9 @@
         let query=sb.from('nicusa_envios').select('id,agencia_id,vuelo_id,remitente,remitente_telefono,destinatario,destinatario_telefono,calle,apartamento,ciudad,estado,zip,categorias,inventario,observaciones,peso_real_agencia,peso_facturable,importe_agencia,foto_ruta,creado_en').order('creado_en',{ascending:false}).limit(200);
         if(!admin)query=query.eq('agencia_id',perfil.agencia_id);
         const {data,error}=await query;if(error)throw error;registros=data||[];
-        const [a,v]=await Promise.all([admin?sb.from('agencias').select('id,nombre').limit(100):Promise.resolve({data:[]}),sb.from('nicusa_vuelos').select('id,fecha').order('fecha',{ascending:false}).limit(100)]);
+        const [a,v]=await Promise.all([sb.from('agencias').select('id,nombre,logo_url').limit(100),sb.from('nicusa_vuelos').select('id,fecha').order('fecha',{ascending:false}).limit(100)]);
         if(a.error)throw a.error;if(v.error)throw v.error;
-        agencias=new Map((a.data||[]).map(x=>[x.id,x.nombre]));vuelos=new Map((v.data||[]).map(x=>[x.id,x.fecha]));
+        agencias=new Map((a.data||[]).map(x=>[x.id,x.nombre]));logosAgencias=new Map((a.data||[]).map(x=>[x.id,x.logo_url||'']));vuelos=new Map((v.data||[]).map(x=>[x.id,x.fecha]));
         const selectedVuelo=vueloFiltro.value;vueloFiltro.replaceChildren(new Option('Todos los vuelos',''));for(const x of v.data||[])vueloFiltro.add(new Option(x.fecha,x.id));vueloFiltro.value=selectedVuelo;
         if(agenciaFiltro){const selected=agenciaFiltro.value;agenciaFiltro.replaceChildren(new Option('Todas las agencias',''));for(const x of a.data||[])agenciaFiltro.add(new Option(x.nombre,x.id));agenciaFiltro.value=selected;}
         render();
