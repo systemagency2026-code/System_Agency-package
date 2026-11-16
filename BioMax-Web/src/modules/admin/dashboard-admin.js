@@ -452,10 +452,9 @@ async function cargarDashboardResumen() {
 
     const [
       { data: agencias, error: errorAgencias },
-      { data: solicitudes, error: errorSolicitudes },
+      { data: solicitudes },
       { data: cortes, error: errorCortes },
-      { count: countBultos, error: errorBultos },
-      { count: countSolSuc, error: errorSolSuc },
+      { count: countSolSuc },
     ] = await Promise.all([
       supabase.from("agencias").select("*"),
       supabase
@@ -483,11 +482,6 @@ async function cargarDashboardResumen() {
     const agenciasActivas = errorAgencias ? null : agenciasCache.filter(
       (a) => ["activo", "activa"].includes(String(a.estado || "").trim().toLowerCase()),
     ).length;
-    if (errorAgencias) console.error("Error al contar agencias activas:", errorAgencias);
-    if (errorBultos) console.error("Error al contar bultos:", errorBultos);
-    if (errorCortes) console.error("Error al cargar cortes para saldos:", errorCortes);
-    if (errorSolicitudes) console.error("Error al cargar solicitudes:", errorSolicitudes);
-    if (errorSolSuc) console.error("Error al contar solicitudes de sucursal:", errorSolSuc);
 
     const pendientesAfil = solicitudes?.length ?? 0;
     const pendientesSuc = countSolSuc ?? 0;
@@ -607,9 +601,6 @@ async function cargarDashboardResumen() {
     renderActividadReciente(listaCortes);
   } catch (err) {
     console.error("Error dashboard resumen:", err);
-    for (const id of ["stat-agencias", "stat-bultos", "stat-saldo-cobrar"]) {
-      if ($(id)) $(id).textContent = "—";
-    }
   }
 }
 
