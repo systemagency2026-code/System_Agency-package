@@ -464,14 +464,13 @@ async function cargarDashboardResumen() {
         .eq("estado", "pendiente"),
       supabase.from("cortes_contenedores").select("*"),
       supabase
-        .from("paquetes_bultos")
-        .select("*", { count: "exact", head: true }),
-      supabase
         .from("solicitudes_sucursal")
         .select("*", { count: "exact", head: true })
         .eq("estado", "pendiente"),
     ]);
 
+    if (errorAgencias) console.error("No se pudieron consultar agencias:", errorAgencias);
+    if (errorCortes) console.error("No se pudieron consultar cortes:", errorCortes);
     agenciasCache = agencias || [];
     let listaCortes = cortes || [];
 
@@ -481,10 +480,8 @@ async function cargarDashboardResumen() {
       );
     }
 
-    // No confundir una consulta fallida con un conteo real de cero.
     const agenciasActivas = errorAgencias ? null : agenciasCache.filter(
-      (a) => String(a.estado ?? "").trim().toLowerCase() === "activo" ||
-             String(a.estado ?? "").trim().toLowerCase() === "activa",
+      (a) => ["activo", "activa"].includes(String(a.estado || "").trim().toLowerCase()),
     ).length;
     if (errorAgencias) console.error("Error al contar agencias activas:", errorAgencias);
     if (errorBultos) console.error("Error al contar bultos:", errorBultos);
@@ -500,6 +497,30 @@ async function cargarDashboardResumen() {
       const e = (c.estado || "Pendiente").toLowerCase();
       return e === "pendiente" || e === "recibido" || e === "abierto";
     }).length;
+
+    // Contar bultos de cortes aún no entregados. El seguimiento de entrega
+    // (estado_envio) es independiente del estado financiero del corte.
+    let bultosEnRed = null;
+    if (!errorCortes) {
+      const idsActivos = listaCortes
+        .filter((c) => String(c.estado_envio || "consolidacion_miami").trim().toLowerCase() !== "entregado")
+        .map((c) => c.id)
+        .filter(Boolean);
+      bultosEnRed = 0;
+      // Consultas de conteo sin descargar filas. Lotes pequeños para evitar URL largas.
+      for (let i = 0; i < idsActivos.length; i += 40) {
+        const { count, error } = await supabase
+          .from("paquetes_bultos")
+          .select("id", { count: "exact", head: true })
+          .in("corte_id", idsActivos.slice(i, i + 40));
+        if (error || count == null) {
+          console.error("Error consultando bultos activos:", error);
+          bultosEnRed = null;
+          break;
+        }
+        bultosEnRed += count;
+      }
+    }
 
     // ========== RANGO DE FECHAS (últimos 30 días + fechas futuras si existen) ==========
     const ahora = new Date();
@@ -563,7 +584,7 @@ async function cargarDashboardResumen() {
       $("stat-solicitudes").textContent = String(pendientesSol);
     if ($("stat-cortes")) $("stat-cortes").textContent = String(abiertos);
     if ($("stat-bultos"))
-      $("stat-bultos").textContent = errorBultos || countBultos == null ? "—" : String(countBultos);
+      $("stat-bultos").textContent = bultosEnRed === null ? "—" : String(bultosEnRed);
     if ($("stat-ingresos-30"))
       $("stat-ingresos-30").textContent = formatMoney(ingresos30);
     if ($("stat-saldo-cobrar"))
