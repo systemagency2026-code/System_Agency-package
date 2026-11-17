@@ -2382,6 +2382,10 @@ function setupReportesOperativos() {
     for(const id of ['rep-filtro-corte','rep-filtro-agencia','rep-filtro-modalidad'])$(id).value='';
     repRenderFiltrado();
   });
+  if($('rep-busqueda')) {
+    $('rep-busqueda').placeholder='Ej. 1116, 1118, BIO Mar';
+    $('rep-busqueda').title='Separá varios cortes o palabras clave con comas';
+  }
   $('rep-busqueda')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();generarReporteOperativo();}});
 }
 async function generarReporteOperativo() {
@@ -2396,12 +2400,15 @@ async function generarReporteOperativo() {
       repLeerTodo('cortes_contenedores','id,agencia_id,tipo_envio,numero_corte')
     ]);
     const nombres=new Map(agencias.map(a=>[String(a.id),a.nombre||'—']));
-    const q=repNormalizar($('rep-busqueda').value.trim());
+    // Acepta varios cortes o palabras clave separados por comas.
+    // Cada término se evalúa por separado (OR), conservando la búsqueda individual.
+    const terminos=$('rep-busqueda').value.split(',').map(s=>repNormalizar(s.trim())).filter(Boolean);
     const agencia=$('rep-agencia').value;
     const modalidad=$('rep-modalidad').value;
     const seleccion=cortes.filter(c=>{
       const nombre=nombres.get(String(c.agencia_id))||'';
-      const coincide=!q||repNormalizar([nombre,c.numero_corte,c.tipo_envio].join(' ')).includes(q);
+      const texto=repNormalizar([nombre,c.numero_corte,c.tipo_envio].join(' '));
+      const coincide=terminos.length===0||terminos.some(termino=>texto.includes(termino));
       return coincide && (!agencia||String(c.agencia_id)===agencia) && (!modalidad||repModalidad(c.tipo_envio)===modalidad);
     });
     // Se consultan paquetes en lotes de cortes, evitando cargar paquetes de otros cortes.
