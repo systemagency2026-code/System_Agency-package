@@ -92,6 +92,56 @@ const escapeHtml = (value = "") =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 
+// Orden alfabético de clientes para consulta y cobro; no modifica los registros originales.
+function ordenarBultosPorCliente(bultos) {
+  return [...(bultos || [])].sort((a, b) => {
+    const nombreA = String(a.cliente_nombre || "").trim();
+    const nombreB = String(b.cliente_nombre || "").trim();
+    if (!nombreA) return nombreB ? 1 : 0;
+    if (!nombreB) return -1;
+    return nombreA.localeCompare(nombreB, "es", { sensitivity: "base", numeric: true });
+  });
+}
+
+// CSV local de cobranza: usa exclusivamente los bultos ya cargados en pantalla.
+function exportarBultosCorteCSV(corte, bultos) {
+  const campo = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const titulo = `${String(corte.tipo_envio || "Envío").toUpperCase()} · Corte ${corte.numero_corte || "N/D"}`;
+  const filas = [
+    [titulo],
+    ["Cliente", "Tracking", "Peso (lb)"],
+    ...ordenarBultosPorCliente(bultos).map((b) => [
+      b.cliente_nombre || "", b.tracking || "", (Number(b.peso_lbs) || 0).toFixed(2)
+    ])
+  ];
+  const contenido = "\uFEFF" + filas.map((fila) => fila.map(campo).join(",")).join("\r\n");
+  const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `BioMax_${String(corte.tipo_envio || "Envio")}_${String(corte.numero_corte || "ND")}_Clientes.csv`.replace(/[^a-zA-Z0-9_.-]/g, "_");
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function habilitarExportacionCSV(modal, tituloId, corte, bultos) {
+  const titulo = $(tituloId);
+  if (!modal || !titulo) return;
+  let boton = modal.querySelector(".btn-exportar-corte-csv");
+  if (!boton) {
+    boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "btn-secondary btn-sm btn-exportar-corte-csv";
+    boton.textContent = "Descargar CSV";
+    boton.style.cssText = "margin:10px 0;display:inline-block;cursor:pointer";
+    titulo.insertAdjacentElement("afterend", boton);
+  }
+  boton.disabled = !bultos;
+  boton.onclick = () => exportarBultosCorteCSV(corte, bultos);
+}
+
 function formatMoney(n) {
   return `$${parseFloat(n || 0).toFixed(2)}`;
 }
@@ -856,12 +906,13 @@ async function abrirDetalleContenedorAgencia(corte) {
     tbody.innerHTML = '<tr><td colspan="6">Error al cargar paquetes.</td></tr>';
     return;
   }
-  const lista = bultos || [];
+  const lista = ordenarBultosPorCliente(bultos);
   const peso = lista.reduce((s, b) => s + (Number(b.peso_lbs) || 0), 0);
   const costo = lista.reduce((s, b) => s + (Number(b.costo) || 0), 0);
   const tarifa = peso > 0 ? costo / peso : 0;
   $("consulta-titulo-agencia").textContent =
     `${String(corte.tipo_envio || "Envío").toUpperCase()} · Corte ${corte.numero_corte || "N/D"}`;
+  habilitarExportacionCSV(modal, "consulta-titulo-agencia", corte, lista);
   resumen.innerHTML = `
     <div><small>Vía del corte</small><strong>${escapeHtml(corte.tipo_envio || "—")}</strong></div>
     <div><small>Tarifa promedio</small><strong>${formatMoney(tarifa)} / lb</strong></div>
@@ -1048,6 +1099,8 @@ function abrirModalBultosAgente(corte, bultos) {
       `Fecha de corte: ${fechaCorteTexto(corte)} · Bultos: ${(bultos || []).length} · ${totalLbs.toFixed(2)} lbs aprox`;
   }
 
+  habilitarExportacionCSV(modal, "bulto-modal-titulo", corte, bultos || []);
+
   // NUEVO: Mostrar estado de seguimiento en el modal
   const badgeEl = $("estado-seguimiento-badge");
   if (badgeEl) {
@@ -1062,7 +1115,7 @@ function abrirModalBultosAgente(corte, bultos) {
       tbody.innerHTML = `<tr class="empty-row"><td colspan="5">No hay bultos registrados en este corte.</td></tr>`;
     } else {
       tbody.innerHTML = "";
-      bultos.forEach((b, idx) => {
+      ordenarBultosPorCliente(bultos).forEach((b, idx) => {
         const estadoActual = b.estado || "Pendiente";
         const fotoHtml = b.foto_url
           ? `<button type="button" class="thumb btn-ver-foto" data-foto="${escapeHtml(b.foto_url)}" title="Ver foto" style="border:0;background:transparent;padding:0;cursor:pointer;line-height:0;flex-shrink:0">
