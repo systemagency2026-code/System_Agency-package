@@ -1219,6 +1219,8 @@ async function cargarCortesGlobalesAdmin() {
     tbody.appendChild(tr);
   });
 
+  aplicarFiltrosCortes();
+
   tbody.querySelectorAll(".select-estado-envio").forEach((sel) => {
     sel.addEventListener("change", async (e) => {
       const id = e.target.getAttribute("data-id");
@@ -2305,6 +2307,38 @@ async function loadSolicitudesPendientes() {
 }
 
 
+// Filtros de contenedores: solo afectan la visualización, nunca la base de datos.
+function aplicarFiltrosCortes() {
+  const cuerpo=$("tabla-admin-cortes-body");
+  if(!cuerpo)return;
+  const q=(id)=>repNormalizar($(id)?.value?.trim()||"");
+  const filtroCorte=q("cf-corte"),filtroAgencia=q("cf-agencia"),filtroTipo=q("cf-tipo"),
+        filtroFecha=q("cf-fecha"),filtroEstado=q("cf-estado");
+  let visibles=0;
+  for(const fila of cuerpo.querySelectorAll("tr")) {
+    if(fila.classList.contains("empty-row"))continue;
+    const c=fila.cells;
+    if(c.length<9)continue;
+    const ok=(!filtroCorte||repNormalizar(c[2].textContent).includes(filtroCorte))&&
+      (!filtroAgencia||repNormalizar(c[0].textContent).includes(filtroAgencia))&&
+      (!filtroTipo||repModalidad(c[1].textContent)===filtroTipo)&&
+      (!filtroFecha||repNormalizar(c[3].textContent).includes(filtroFecha))&&
+      (!filtroEstado||repNormalizar(c[7].textContent).includes(filtroEstado));
+    fila.hidden=!ok;fila.style.display=ok?"":"none";
+    if(ok)visibles++;
+  }
+  if($("cf-conteo"))$("cf-conteo").textContent=visibles+" contenedor(es) visible(s)";
+}
+function setupFiltrosCortes() {
+  for(const id of ["cf-corte","cf-agencia","cf-tipo","cf-fecha","cf-estado"]) {
+    $(id)?.addEventListener(id==="cf-tipo"||id==="cf-estado"?"change":"input",aplicarFiltrosCortes);
+  }
+  $("cf-limpiar")?.addEventListener("click",()=>{
+    for(const id of ["cf-corte","cf-agencia","cf-tipo","cf-fecha","cf-estado"])if($(id))$(id).value="";
+    aplicarFiltrosCortes();
+  });
+}
+
 // REPORTES OPERATIVOS: solo lectura, para Superadmin y Operador.
 const REP_TARIFA_PEQUENO = 0.20;
 const REP_TARIFA_GRANDE = 1.00;
@@ -2340,12 +2374,21 @@ async function prepararReportesOperativos() {
 function setupReportesOperativos() {
   $('rep-consultar')?.addEventListener('click', generarReporteOperativo);
   $('rep-csv')?.addEventListener('click', descargarReporteOperativoCSV);
+  $('rep-png')?.addEventListener('click', descargarReporteOperativoPNG);
+  for(const id of ['rep-filtro-corte','rep-filtro-agencia','rep-filtro-modalidad']) {
+    $(id)?.addEventListener(id==='rep-filtro-modalidad'?'change':'input',repRenderFiltrado);
+  }
+  $('rep-filtros-limpiar')?.addEventListener('click',()=>{
+    for(const id of ['rep-filtro-corte','rep-filtro-agencia','rep-filtro-modalidad'])$(id).value='';
+    repRenderFiltrado();
+  });
   $('rep-busqueda')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();generarReporteOperativo();}});
 }
 async function generarReporteOperativo() {
   const boton=$('rep-consultar'), estado=$('rep-estado');
   boton.disabled=true;
   $('rep-csv').disabled=true;
+  $('rep-png').disabled=true;
   estado.textContent='Consultando cortes y paquetes...';
   try {
     const [agencias,cortes]=await Promise.all([
@@ -2382,27 +2425,82 @@ async function generarReporteOperativo() {
     }
     repUltimasFilas=[...mapa.values()].map(f=>({...f,total:f.pequenos+f.grandes,pago:f.pequenos*REP_TARIFA_PEQUENO+f.grandes*REP_TARIFA_GRANDE}));
     repUltimasFilas.sort((a,b)=>a.agencia.localeCompare(b.agencia,'es')||String(a.corte).localeCompare(String(b.corte),'es'));
-    const totalP=repUltimasFilas.reduce((n,f)=>n+f.pequenos,0);
-    const totalG=repUltimasFilas.reduce((n,f)=>n+f.grandes,0);
-    $('rep-pequenos').textContent=totalP;
-    $('rep-grandes').textContent=totalG;
-    $('rep-total').textContent=totalP+totalG;
-    $('rep-pago').textContent=repDinero(totalP*.20+totalG);
-    $('rep-filas').innerHTML=repUltimasFilas.length ? repUltimasFilas.map(f=>`<tr><td>${repTexto(f.agencia)}</td><td>${repTexto(f.corte)}</td><td>${repTexto(f.tipo)}</td><td>${f.pequenos}</td><td>${f.grandes}</td><td>${f.total}</td><td>${repDinero(f.pago)}</td></tr>`).join('') : '<tr><td colspan="7">No hay cortes que coincidan con los filtros.</td></tr>';
-    estado.textContent=`Reporte generado: ${seleccion.length} corte(s), ${totalP+totalG} paquete(s). Paquetes sin peso válido no se contabilizan.`;
-    $('rep-csv').disabled=repUltimasFilas.length===0;
+    repRenderFiltrado();
+    estado.textContent=`Reporte generado: ${seleccion.length} corte(s). Aplicá filtros al desglose para ajustar resumen y exportaciones.`;
   } catch(e) {
     console.error('Error reporte operativo',e);
     estado.textContent='No se pudo generar el reporte: '+e.message;
     repUltimasFilas=[];
+    $('rep-png').disabled=true;
   } finally {boton.disabled=false;}
 }
 function descargarReporteOperativoCSV() {
-  if(!repUltimasFilas.length)return;
-  const filas=[['Agencia','Corte','Modalidad','Menores de 20 lb','Desde 20 lb','Total paquetes','Pago USD'],...repUltimasFilas.map(f=>[f.agencia,f.corte,f.tipo,f.pequenos,f.grandes,f.total,f.pago.toFixed(2)])];
+  const repFilas=repFilasVisibles();
+  if(!repFilas.length)return;
+  const filas=[['Agencia','Corte','Modalidad','Menores de 20 lb','Desde 20 lb','Total paquetes','Pago USD'],...repFilas.map(f=>[f.agencia,f.corte,f.tipo,f.pequenos,f.grandes,f.total,f.pago.toFixed(2)])];
   const csv='\uFEFF'+filas.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   const a=document.createElement('a');a.href=url;a.download='BioMax_Reporte_Operativo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+
+function repFilasVisibles() {
+  const corte=repNormalizar($('rep-filtro-corte')?.value?.trim()||'');
+  const agencia=repNormalizar($('rep-filtro-agencia')?.value?.trim()||'');
+  const tipo=$('rep-filtro-modalidad')?.value||'';
+  return repUltimasFilas.filter(f=>(!corte||repNormalizar(f.corte).includes(corte))&&
+    (!agencia||repNormalizar(f.agencia).includes(agencia))&&(!tipo||repModalidad(f.tipo)===tipo));
+}
+function repRenderFiltrado() {
+  const filas=repFilasVisibles();
+  const p=filas.reduce((n,f)=>n+f.pequenos,0),g=filas.reduce((n,f)=>n+f.grandes,0);
+  $('rep-pequenos').textContent=p;
+  $('rep-grandes').textContent=g;
+  $('rep-total').textContent=p+g;
+  $('rep-pago').textContent=repDinero(filas.reduce((n,f)=>n+f.pago,0));
+  $('rep-filas').innerHTML=filas.length?filas.map(f=>`<tr><td>${repTexto(f.agencia)}</td><td>${repTexto(f.corte)}</td><td>${repTexto(f.tipo)}</td><td>${f.pequenos}</td><td>${f.grandes}</td><td>${f.total}</td><td>${repDinero(f.pago)}</td></tr>`).join(''):'<tr><td colspan="7">No hay resultados con los filtros actuales.</td></tr>';
+  $('rep-csv').disabled=filas.length===0;
+  $('rep-png').disabled=filas.length===0;
+}
+// Exportación íntegra, sin recortar filas ni depender del tamaño visible de pantalla.
+function descargarReporteOperativoPNG() {
+  const filas=repFilasVisibles();
+  if(!filas.length)return;
+  const width=1600, margin=45, rowH=43, headerY=250;
+  const height=headerY+rowH*(filas.length+2)+60;
+  const canvas=document.createElement('canvas');
+  canvas.width=width*1.5;canvas.height=height*1.5;
+  const c=canvas.getContext('2d');
+  if(!c){alert('No se pudo generar la imagen.');return;}
+  c.scale(1.5,1.5);
+  c.fillStyle='#ffffff';c.fillRect(0,0,width,height);
+  c.fillStyle='#111827';c.font='bold 35px Arial';c.fillText('BioMax | Reporte operativo',margin,60);
+  c.fillStyle='#64748b';c.font='20px Arial';
+  c.fillText('Generado: '+new Date().toLocaleString('es-NI'),margin,94);
+  const p=filas.reduce((n,f)=>n+f.pequenos,0),g=filas.reduce((n,f)=>n+f.grandes,0),pago=filas.reduce((n,f)=>n+f.pago,0);
+  const tarjetas=[['Menores de 20 lb',p],['Desde 20 lb',g],['Total paquetes',p+g],['Pago total (USD)',repDinero(pago)]];
+  tarjetas.forEach(([titulo,valor],i)=>{
+    const x=margin+i*380;
+    c.fillStyle='#f1f5f9';c.fillRect(x,120,365,100);
+    c.fillStyle='#475569';c.font='19px Arial';c.fillText(titulo,x+15,150);
+    c.fillStyle='#0f172a';c.font='bold 31px Arial';c.fillText(String(valor),x+15,194);
+  });
+  const columnas=[['Agencia',margin,275],['Corte',340,125],['Modalidad',485,180],['Menores 20 lb',690,165],['Desde 20 lb',875,155],['Total',1070,130],['Pago USD',1300,210]];
+  c.fillStyle='#0f172a';c.fillRect(margin,headerY,width-2*margin,rowH);
+  c.fillStyle='#ffffff';c.font='bold 19px Arial';
+  columnas.forEach(([t,x])=>c.fillText(t,x+8,headerY+28));
+  const acortar=(s,max)=>{s=String(s??'');while(c.measureText(s).width>max&&s.length>1)s=s.slice(0,-2)+'…';return s;};
+  filas.forEach((f,i)=>{
+    const y=headerY+rowH*(i+1);
+    c.fillStyle=i%2?'#ffffff':'#f8fafc';c.fillRect(margin,y,width-2*margin,rowH);
+    c.fillStyle='#111827';c.font='18px Arial';
+    const valores=[f.agencia,f.corte,f.tipo,f.pequenos,f.grandes,f.total,repDinero(f.pago)];
+    columnas.forEach(([,x,w],k)=>c.fillText(acortar(valores[k],w-16),x+8,y+28));
+    c.fillStyle='#e2e8f0';c.fillRect(margin,y+rowH-1,width-2*margin,1);
+  });
+  const link=document.createElement('a');
+  link.download='BioMax_Reporte_Operativo_'+new Date().toISOString().slice(0,10)+'.png';
+  link.href=canvas.toDataURL('image/png');link.click();
 }
 
 // LIQUIDACIÓN DE CARGA V2 — vista previa sin escritura en Supabase.
@@ -2732,6 +2830,7 @@ async function initAdminDashboard() {
   setupFormBultos();
   setupSolicitudesSucursal();
   setupReportesOperativos();
+  setupFiltrosCortes();
   setupLiquidacion();
   if (ctx.rol === "admin") setupGestionClientes();
   if(ctx.rol === "admin") liqCargarHistorial();
