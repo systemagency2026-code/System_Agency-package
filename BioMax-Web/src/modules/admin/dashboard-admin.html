@@ -162,6 +162,12 @@
             </a>
           </li>
           <li>
+            <a href="#view-clientes" class="nav-link" data-target="view-clientes">
+              <svg class="icon" aria-hidden="true"><use href="#i-building"></use></svg>
+              <span>Gestión de clientes</span>
+            </a>
+          </li>
+          <li>
             <a
               href="#view-agencias"
               class="nav-link"
@@ -541,7 +547,38 @@
           </article>
         </section>
 
-        <section
+        <section id="view-clientes" class="dashboard-view" hidden>
+        <div class="card" style="padding:20px;margin-bottom:16px">
+          <h2>Gestión de clientes</h2>
+          <p>Administración exclusiva de SuperAdmin. La desactivación conserva el historial.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin:14px 0">
+            <input id="gc-buscar" class="form-input" placeholder="Buscar nombre o teléfono" aria-label="Buscar clientes" style="flex:1;min-width:220px">
+            <select id="gc-filtro-agencia" class="form-input" aria-label="Filtrar agencia"><option value="">Todas las agencias</option></select>
+            <button id="gc-recargar" class="btn btn-secondary" type="button">Actualizar</button>
+          </div>
+          <p id="gc-estado" role="status"></p>
+          <div style="overflow-x:auto"><table class="table" style="width:100%;min-width:720px"><thead><tr><th>ID</th><th>Cliente</th><th>Teléfono</th><th>Agencia</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="gc-lista"></tbody></table></div>
+        </div>
+        <div class="card" style="padding:20px">
+          <h3 id="gc-form-titulo">Crear cliente</h3>
+          <form id="gc-form">
+            <input id="gc-id" type="hidden">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
+              <label>Nombre completo *<input id="gc-nombre" class="form-input" required maxlength="200"></label>
+              <label>Teléfono *<input id="gc-telefono" class="form-input" required maxlength="60"></label>
+              <label>Agencia *<select id="gc-agencia" class="form-input" required></select></label>
+              <label>Departamento<input id="gc-departamento" class="form-input"></label>
+              <label>Dirección<input id="gc-direccion" class="form-input"></label>
+              <label>Estado<select id="gc-activo" class="form-input"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></label>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px">
+              <button type="submit" class="btn btn-primary" id="gc-guardar">Guardar cliente</button>
+              <button type="button" class="btn btn-secondary" id="gc-limpiar">Nuevo / Limpiar</button>
+            </div>
+          </form>
+        </div>
+      </section>
+      <section
           id="view-agencias"
           class="dashboard-view"
           aria-label="Gestión de agencias"
