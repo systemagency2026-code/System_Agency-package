@@ -92,6 +92,17 @@ const escapeHtml = (value = "") =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 
+// Orden alfabético de clientes para consulta y cobro; no modifica los registros originales.
+function ordenarBultosPorCliente(bultos) {
+  return [...(bultos || [])].sort((a, b) => {
+    const nombreA = String(a.cliente_nombre || "").trim();
+    const nombreB = String(b.cliente_nombre || "").trim();
+    if (!nombreA) return nombreB ? 1 : 0;
+    if (!nombreB) return -1;
+    return nombreA.localeCompare(nombreB, "es", { sensitivity: "base", numeric: true });
+  });
+}
+
 function formatMoney(n) {
   return `$${parseFloat(n || 0).toFixed(2)}`;
 }
@@ -856,7 +867,7 @@ async function abrirDetalleContenedorAgencia(corte) {
     tbody.innerHTML = '<tr><td colspan="6">Error al cargar paquetes.</td></tr>';
     return;
   }
-  const lista = bultos || [];
+  const lista = ordenarBultosPorCliente(bultos);
   const peso = lista.reduce((s, b) => s + (Number(b.peso_lbs) || 0), 0);
   const costo = lista.reduce((s, b) => s + (Number(b.costo) || 0), 0);
   const tarifa = peso > 0 ? costo / peso : 0;
@@ -1062,7 +1073,7 @@ function abrirModalBultosAgente(corte, bultos) {
       tbody.innerHTML = `<tr class="empty-row"><td colspan="5">No hay bultos registrados en este corte.</td></tr>`;
     } else {
       tbody.innerHTML = "";
-      bultos.forEach((b, idx) => {
+      ordenarBultosPorCliente(bultos).forEach((b, idx) => {
         const estadoActual = b.estado || "Pendiente";
         const fotoHtml = b.foto_url
           ? `<button type="button" class="thumb btn-ver-foto" data-foto="${escapeHtml(b.foto_url)}" title="Ver foto" style="border:0;background:transparent;padding:0;cursor:pointer;line-height:0;flex-shrink:0">
