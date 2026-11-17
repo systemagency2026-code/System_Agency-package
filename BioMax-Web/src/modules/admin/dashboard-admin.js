@@ -405,6 +405,7 @@ function setupNavegacion() {
           : link.textContent.trim();
       }
 
+      if (targetId === "view-clientes" && rolUsuario === "admin") cargarGestionClientes();
       if (targetId === "view-reportes") prepararReportesOperativos();
       if (targetId === "view-liquidacion") prepararLiquidacion();
       if (targetId === "view-solicitudes-sucursal") {
@@ -2642,6 +2643,81 @@ function liqAccionHistorial(e){
   $('liq-estado').textContent='Historial abierto: '+registro.titulo+'. Los importes son los originales archivados.';
   $('liq-resultados').scrollIntoView({behavior:'smooth',block:'start'});
 }
+
+let gcClientes=[],gcAgencias=[];
+const gc=id=>document.getElementById(id);
+const gcMsg=s=>{if(gc("gc-estado"))gc("gc-estado").textContent=s;};
+function gcLimpiar(){gc("gc-form").reset();gc("gc-id").value="";gc("gc-form-titulo").textContent="Crear cliente";}
+function gcRender(){
+ const q=(gc("gc-buscar").value||"").toLowerCase(),ag=gc("gc-filtro-agencia").value,tbody=gc("gc-lista");
+ tbody.replaceChildren();let n=0;
+ for(const c of gcClientes){
+  if(ag&&String(c.agencia_id)!==ag)continue;
+  if(q&&!String(c.nombre_cliente+" "+c.telefono).toLowerCase().includes(q))continue;
+  n++;const tr=document.createElement("tr");
+  const agencia=gcAgencias.find(a=>String(a.id)===String(c.agencia_id));
+  for(const value of [c.id,c.nombre_cliente,c.telefono,agencia?.nombre||"—",c.estado]){
+   const td=document.createElement("td");td.textContent=String(value??"");tr.append(td);
+  }
+  const td=document.createElement("td"),edit=document.createElement("button");
+  edit.type="button";edit.textContent="Editar";edit.className="btn btn-secondary";
+  edit.onclick=()=>{
+   for(const [id,key] of [["gc-id","id"],["gc-nombre","nombre_cliente"],["gc-telefono","telefono"],["gc-agencia","agencia_id"],["gc-departamento","departamento"],["gc-direccion","direccion"],["gc-activo","estado"]])gc(id).value=c[key]??"";
+   gc("gc-form-titulo").textContent="Editar cliente #"+c.id;
+   gc("gc-form").scrollIntoView({behavior:"smooth",block:"center"});
+  };
+  const toggle=document.createElement("button");toggle.type="button";toggle.className="btn btn-secondary";
+  toggle.textContent=c.estado==="activo"?"Desactivar":"Reactivar";toggle.style.marginLeft="8px";
+  toggle.onclick=async()=>{
+   const nuevo=c.estado==="activo"?"inactivo":"activo";
+   if(!confirm("¿Confirmás cambiar el estado de "+c.nombre_cliente+" a "+nuevo+"?"))return;
+   toggle.disabled=true;
+   const {error}=await supabase.from("clientes_agencia").update({estado:nuevo}).eq("id",c.id);
+   if(error)gcMsg("Error: "+error.message);
+   await cargarGestionClientes();
+  };
+  td.append(edit,toggle);tr.append(td);tbody.append(tr);
+ }
+ gcMsg(n+" clientes. La desactivación conserva el historial.");
+}
+async function cargarGestionClientes(){
+ if(rolUsuario!=="admin")return;
+ gcMsg("Cargando clientes...");
+ const [c,a]=await Promise.all([
+  supabase.from("clientes_agencia").select("id,nombre_cliente,telefono,agencia_id,departamento,direccion,estado").order("id",{ascending:false}).limit(1000),
+  supabase.from("agencias").select("id,nombre").order("nombre").limit(1000)
+ ]);
+ if(c.error||a.error){gcMsg("Error: "+(c.error||a.error).message);return;}
+ gcClientes=c.data||[];gcAgencias=a.data||[];
+ for(const id of ["gc-agencia","gc-filtro-agencia"]){
+  const s=gc(id),previous=s.value;s.replaceChildren();
+  const first=document.createElement("option");first.value="";first.textContent=id==="gc-agencia"?"Seleccionar agencia":"Todas las agencias";s.append(first);
+  for(const ag of gcAgencias){const opt=document.createElement("option");opt.value=ag.id;opt.textContent=ag.nombre;s.append(opt);}
+  s.value=previous;
+ }
+ gcRender();
+}
+function setupGestionClientes(){
+ if(rolUsuario!=="admin"||!gc("gc-form"))return;
+ gc("gc-buscar").oninput=gcRender;
+ gc("gc-filtro-agencia").onchange=gcRender;
+ gc("gc-recargar").onclick=cargarGestionClientes;
+ gc("gc-limpiar").onclick=gcLimpiar;
+ gc("gc-form").onsubmit=async e=>{
+  e.preventDefault();const id=gc("gc-id").value;
+  const values={nombre_cliente:gc("gc-nombre").value.trim(),telefono:gc("gc-telefono").value.trim(),agencia_id:gc("gc-agencia").value,departamento:gc("gc-departamento").value.trim()||null,direccion:gc("gc-direccion").value.trim()||null,estado:gc("gc-activo").value};
+  if(!values.nombre_cliente||!values.telefono||!values.agencia_id){gcMsg("Nombre, teléfono y agencia obligatorios.");return;}
+  const old=gcClientes.find(c=>String(c.id)===id);
+  if(old&&String(old.agencia_id)!==String(values.agencia_id)&&!confirm("¿Confirmás cambiar de agencia a este cliente?"))return;
+  const btn=gc("gc-guardar");btn.disabled=true;
+  try{
+   const {error}=await (id?supabase.from("clientes_agencia").update(values).eq("id",id):supabase.from("clientes_agencia").insert([values]));
+   if(error){gcMsg("Error: "+error.message);return;}
+   gcLimpiar();await cargarGestionClientes();gcMsg("Cliente guardado.");
+  }finally{btn.disabled=false;}
+ };
+}
+
 async function initAdminDashboard() {
   const ctx = await cargarPerfilSesion();
   if (!ctx) return;
@@ -2657,6 +2733,7 @@ async function initAdminDashboard() {
   setupSolicitudesSucursal();
   setupReportesOperativos();
   setupLiquidacion();
+  if (ctx.rol === "admin") setupGestionClientes();
   if(ctx.rol === "admin") liqCargarHistorial();
 
   if (ctx.rol === "admin") {
