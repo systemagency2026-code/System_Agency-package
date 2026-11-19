@@ -19,14 +19,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const formTitle = document.getElementById("form-title");
   const formSubtitle = document.getElementById("form-subtitle");
   const alertBox = document.getElementById("alert-box");
+  const heroPanel = document.querySelector(".auth-hero-panel");
+  const heroMessage = document.querySelector(".hero-bottom-card h1");
 
   if (toRegisterLink && toLoginLink) {
     toRegisterLink.addEventListener("click", (e) => {
       e.preventDefault();
       loginForm.style.display = "none";
       registerForm.style.display = "block";
+      heroPanel.style.backgroundImage = 'linear-gradient(180deg, rgba(9, 13, 22, 0.45) 0%, rgba(9, 13, 22, 0.88) 100%), url("./assets/background/background-afiliacion.png")';
       formTitle.textContent = "Solicitud de Afiliación";
       formSubtitle.textContent = "Únete a nuestra red logística como agencia";
+      if (heroMessage) heroMessage.textContent = "Formá parte de nuestra red logística";
       hideAlert();
     });
 
@@ -34,9 +38,11 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       registerForm.style.display = "none";
       loginForm.style.display = "block";
+      heroPanel.style.backgroundImage = 'linear-gradient(180deg, rgba(9, 13, 22, 0.45) 0%, rgba(9, 13, 22, 0.88) 100%), url("./assets/background/login.png")';
       formTitle.textContent = "Iniciar Sesión";
       formSubtitle.textContent =
         "Ingresa tus credenciales para acceder al sistema";
+      if (heroMessage) heroMessage.textContent = "Tu centro de operaciones logísticas";
       hideAlert();
     });
   }
@@ -58,6 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
     alertBox.textContent = message;
     alertBox.className = `alert ${type}`;
     alertBox.style.display = "block";
+    
   }
 
   function hideAlert() {
