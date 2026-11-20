@@ -1680,6 +1680,58 @@
           </div>
           <p class="hint" style="margin-top:18px">Los envíos se registran en Supabase y pueden consultarse en el historial.</p>
 <article class="stat-card" style="margin-bottom:18px">
+  
+<article class="stat-card" style="margin-bottom:18px">
+  <h3 class="card-title">Administración de vuelos NIC → USA</h3>
+  <p class="card-desc">
+    Crear, publicar y despublicar fechas de vuelo.
+  </p>
+
+  <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:14px">
+    <label class="form-field">
+      <span class="form-label">Fecha del vuelo</span>
+      <input
+        id="nicusa-vuelos-fecha"
+        class="form-input"
+        type="date"
+      />
+    </label>
+
+    <button
+      id="nicusa-vuelos-crear"
+      class="btn-primary"
+      type="button"
+    >Crear vuelo</button>
+
+    <button
+      id="nicusa-vuelos-recargar"
+      class="btn-secondary"
+      type="button"
+    >Actualizar vuelos</button>
+  </div>
+
+  <p
+    id="nicusa-vuelos-estado"
+    class="card-desc"
+    role="status"
+    aria-live="polite"
+    style="margin-top:12px"
+  ></p>
+
+  <div class="table-responsive" style="overflow-x:auto;margin-top:14px">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Fecha del vuelo</th>
+          <th>Estado</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody id="nicusa-vuelos-lista"></tbody>
+    </table>
+  </div>
+</article>
+
 <h3 class="card-title">Registro de envío · Nicaragua → Estados Unidos</h3>
 <p class="card-desc">Carga aérea exclusivamente. Registro conectado a Supabase, con historial consultable.</p>
 <div id="nicusa-confirmacion" role="alert" aria-live="assertive" hidden style="padding:18px;margin:16px 0;border:2px solid #15803d;border-radius:12px;background:#f0fdf4;color:#14532d;font-weight:650"></div>
