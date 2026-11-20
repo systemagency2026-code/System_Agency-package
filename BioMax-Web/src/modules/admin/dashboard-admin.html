@@ -1748,7 +1748,39 @@
 <div class="form-field"><label class="form-label" for="nicusa-estado">Estado (EE. UU.) *</label><input class="form-input" id="nicusa-estado" required maxlength="80"></div>
 <div class="form-field"><label class="form-label" for="nicusa-zip">ZIP *</label><input class="form-input" id="nicusa-zip" required inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="33126 o 33126-1234"></div>
 <div class="form-field"><label class="form-label" for="nicusa-vuelo">Fecha de vuelo *</label><select class="form-input" id="nicusa-vuelo" required disabled><option value="">Pendiente: SuperAdmin debe publicar vuelos</option></select></div>
-<div class="form-field"><span class="form-label" id="nicusa-categoria-label">Tipos de carga (podés elegir varios) *</span><fieldset id="nicusa-categorias" aria-labelledby="nicusa-categoria-label" style="border:1px solid #dbe3ed;border-radius:12px;padding:12px;display:grid;gap:9px"><legend style="font-size:0.8rem">Selección preliminar</legend><label><input type="checkbox" name="nicusa-categoria" value="general"> Carga general</label><label><input type="checkbox" name="nicusa-categoria" value="medicamentos"> Medicamentos</label><label><input type="checkbox" name="nicusa-categoria" value="documentos"> Documentos</label><label><input type="checkbox" name="nicusa-categoria" value="otros"> Otros (pendiente de definir)</label></fieldset><p class="hint">Podés combinar categorías. El importe se calcula con el tarifario vigente de la agencia.</p><p class="hint" id="nicusa-categorias-seleccionadas" aria-live="polite">Ninguna categoría seleccionada.</p></div>
+
+<div class="form-field">
+  <span class="form-label" id="nicusa-categoria-label">
+    Tipos de carga (podés elegir varios) *
+  </span>
+
+  <fieldset id="nicusa-categorias" aria-labelledby="nicusa-categoria-label"
+    style="border:1px solid #dbe3ed;border-radius:12px;padding:12px;display:grid;gap:9px">
+
+    <legend>Catálogo NIC → USA</legend>
+
+    <label><input type="checkbox" name="nicusa-categoria" value="general"> Carga general</label>
+    <label><input type="checkbox" name="nicusa-categoria" value="medicamentos"> Medicamentos</label>
+    <label><input type="checkbox" name="nicusa-categoria" value="documentos"> Documentos legales</label>
+    <label><input type="checkbox" name="nicusa-categoria" value="pasaportes"> Pasaportes</label>
+    <label><input type="checkbox" name="nicusa-categoria" value="inyectables"> Inyectables</label>
+    <label><input type="checkbox" name="nicusa-categoria" value="retorno"> Retorno con etiqueta prepagada</label>
+    <label><input type="checkbox" name="nicusa-categoria" value="insulina"> Insulina y derivados</label>
+    <label><input type="checkbox" name="nicusa-categoria" value="termico"> Empaque térmico</label>
+    <label><input type="checkbox" name="nicusa-categoria" value="promo5"> Combo promocional 5 lbs</label>
+    <label><input type="checkbox" name="nicusa-categoria" value="promo10"> Combo promocional 10 lbs</label>
+    <label><input type="checkbox" name="nicusa-categoria" value="promo15"> Combo promocional 15 lbs</label>
+    <label><input type="checkbox" name="nicusa-categoria" value="promo20"> Combo promocional 20 lbs</label>
+  </fieldset>
+
+  <p class="hint">
+    Podés combinar categorías. El importe se calcula con el tarifario vigente de la agencia.
+  </p>
+  <p class="hint" id="nicusa-categorias-seleccionadas" aria-live="polite">
+    Ninguna categoría seleccionada.
+  </p>
+</div>
+
 <div class="form-field" style="grid-column:1/-1"><label class="form-label">Peso o cantidad por tipo de carga</label><div id="nicusa-detalle-cargas" style="display:grid;gap:12px" aria-live="polite"></div><p class="hint">Cada tipo de carga tiene su propio peso o cantidad. Documentos se registra por unidad.</p></div>
 <div class="form-field"><label class="form-label">Peso real total de categorías por libra</label><output id="nicusa-peso-real-total" style="display:block;font-size:1.5rem;font-weight:750;padding:8px 0">—</output></div>
 <div class="form-field"><label class="form-label">Peso facturable total (suma por categoría)</label><output id="nicusa-peso-facturable" style="display:block;font-size:1.5rem;font-weight:750;padding:8px 0">—</output></div>
