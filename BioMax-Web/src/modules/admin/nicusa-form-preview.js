@@ -4,10 +4,17 @@
   const catalogo = {
     general: { nombre: "Carga general", unidad: "lbs" },
     medicamentos: { nombre: "Medicamentos", unidad: "lbs" },
-    documentos: { nombre: "Documentos", unidad: "unidades" },
-    otros: { nombre: "Otros (regla pendiente)", unidad: "pendiente" }
-  };
-  function iniciar() {
+    documentos: { nombre: "Documentos legales", unidad: "unidades" },
+    pasaportes: { nombre: "Pasaportes", unidad: "unidades" },
+    inyectables: { nombre: "Inyectables", unidad: "unidades" },
+    retorno: { nombre: "Retorno con etiqueta prepagada", unidad: "lbs" },
+    insulina: { nombre: "Insulina y derivados", unidad: "unidades" },
+    termico: { nombre: "Empaque térmico", unidad: "unidades" },
+    promo5: { nombre: "Combo promocional 5 lbs", unidad: "lbs" },
+    promo10: { nombre: "Combo promocional 10 lbs", unidad: "lbs" },
+    promo15: { nombre: "Combo promocional 15 lbs", unidad: "lbs" },
+    promo20: { nombre: "Combo promocional 20 lbs", unidad: "lbs" }
+  };  function iniciar() {
     const grupo = document.getElementById("nicusa-categorias");
     const detalle = document.getElementById("nicusa-detalle-cargas");
     const estado = document.getElementById("nicusa-categorias-seleccionadas");
@@ -33,7 +40,7 @@
       }
       if (estadoTarifa) estadoTarifa.textContent = 'Consultando tarifas de la agencia…';
       const {data,error} = await sb.from('nicusa_tarifas_agencia')
-        .select('categoria,precio,unidad').eq('agencia_id',agenciaId).limit(10);
+        .select('categoria,precio,unidad').eq('agencia_id',agenciaId).limit(30);
       if (actual !== solicitudTarifa) return;
       if (error) {
         if (estadoTarifa) estadoTarifa.textContent = 'No se pudieron consultar las tarifas: ' + error.message;
@@ -44,7 +51,7 @@
       if (estadoTarifa) estadoTarifa.textContent = (data || []).length
         ? 'Tarifas vigentes de la agencia seleccionada.'
         : 'Esta agencia todavía no tiene tarifas configuradas.';
-      recalcular();
+      recalcular(); mostrarCalculoPrevio();
     }
     const redondear = n => Math.ceil(n * 2 - 1e-9) / 2;
     function recalcular() {
@@ -90,6 +97,34 @@
         seleccionadas.every(c => c !== 'otros' && valores[c] && Number(valores[c].replace(',', '.')) > 0)
         ? dinero(totalImporte) : '—';
     }
+    function mostrarCalculoPrevio() {
+      const motor=window.BioMaxNICUSATarifas;
+      const seleccion=[...grupo.querySelectorAll('input[type="checkbox"]:checked')].map(x=>x.value);
+      const datos={};
+      for(const cat of seleccion) {
+        const input=document.getElementById('nicusa-carga-'+cat);
+        if(!input || !input.value.trim())return;
+        const n=Number(input.value.trim().replace(',','.'));
+        if(!Number.isFinite(n)||n<=0)return;
+        if(cat.startsWith('promo')) { if(datos.promo) throw Error('Solo un combo por declaración'); if(n!==1) throw Error('Seleccioná una unidad de combo'); datos.promo=cat; }
+        else datos[cat]=n;
+      }
+      if(!motor || !seleccion.length)return;
+      try {
+        const beneficio=document.getElementById('nicusa-beneficio')?.value || 'ninguno';
+        datos.beneficio=beneficio;
+        const tarifasActuales={};
+        for(const [categoria,registro] of Object.entries(tarifas)) {
+          if(Number.isFinite(Number(registro.precio)) && Number(registro.precio)>=0) tarifasActuales[categoria]=Number(registro.precio);
+        }
+        const precio=motor.calcularNICUSA(datos,tarifasActuales);
+        const target=document.getElementById('nicusa-calc-preview');
+        if(target)target.textContent='Simulación (tarifas de agencia disponibles): US$'+precio.importe.toFixed(2)+' · Peso real '+precio.pesoReal.toFixed(2)+' lbs · Peso facturable '+precio.pesoFacturable.toFixed(2)+' lbs. No representa aún el cobro de Supabase.';
+      } catch(e) {
+        const target=document.getElementById('nicusa-calc-preview');
+        if(target)target.textContent='Validación: '+e.message;
+      }
+    }
     function renderizar() {
       const seleccionadas = [...grupo.querySelectorAll('input[type="checkbox"]:checked')].map(e => e.value);
       detalle.replaceChildren();
@@ -103,7 +138,7 @@
         label.className = "form-label";
         const id = "nicusa-carga-" + categoria;
         label.htmlFor = id;
-        label.textContent = dato.nombre + (dato.unidad === "lbs" ? " · peso real (lbs)" : dato.unidad === "unidades" ? " · cantidad de documentos" : " · pendiente de definir unidad");
+        label.textContent = dato.nombre + (dato.unidad === "lbs" ? " · peso real (lbs)" : dato.unidad === "unidades" ? " · cantidad de unidades" : " · pendiente de definir unidad");
         fila.appendChild(label);
         if (dato.unidad !== "pendiente") {
           const input = document.createElement("input");
@@ -116,8 +151,8 @@
           input.pattern = dato.unidad === "unidades" ? "[0-9]+" : "[0-9]+([.,][0-9]+)?";
           input.inputMode = dato.unidad === "unidades" ? "numeric" : "decimal";
           input.placeholder = dato.unidad === "unidades" ? "Ej. 2" : "Ej. 2.74";
-          input.value = valores[categoria] || "";
-          input.addEventListener("input", recalcular);
+          input.value = valores[categoria] || (categoria.startsWith("promo") ? "1" : "");
+          input.addEventListener("input", () => { recalcular(); mostrarCalculoPrevio(); });
           fila.appendChild(input);
         }
         const resultado = document.createElement("output");
@@ -128,7 +163,13 @@
       });
       estado.textContent = seleccionadas.length ? seleccionadas.length + " tipo(s) de carga seleccionado(s). " : "Ninguna categoría seleccionada.";
       recalcular();
+      mostrarCalculoPrevio();
     }
+    const contenedorVista=document.createElement('div');
+    contenedorVista.style.cssText='margin:12px 0;padding:12px;border:1px solid #dbe3ed;border-radius:12px';
+    contenedorVista.innerHTML='<label class="form-label" for="nicusa-beneficio">Beneficio incluido en promoción</label><select class="form-input" id="nicusa-beneficio"><option value="ninguno">Sin beneficio</option><option value="medicamentos">Medicamentos incluidos</option><option value="documentos">1 documento legal</option><option value="pasaportes">1 pasaporte (no aplica al combo 5 lbs)</option></select><p id="nicusa-calc-preview" role="status" style="margin-top:8px;font-weight:600">Seleccioná categorías y cantidades para simular el cobro.</p>';
+    detalle.insertAdjacentElement('afterend',contenedorVista);
+    contenedorVista.querySelector('select').addEventListener('change',mostrarCalculoPrevio);
     const form = document.getElementById('nicusa-form');
     const aviso = document.getElementById('nicusa-aviso');
     const vuelo = document.getElementById('nicusa-vuelo');
@@ -149,6 +190,12 @@
       if(!form.reportValidity()) return;
       const checks=[...grupo.querySelectorAll('input[type="checkbox"]:checked')];
       if(!checks.length || checks.some(c=>c.value==='otros')) { aviso.textContent='Seleccioná una categoría habilitada.';return; }
+      // Evitar registrar una declaración con importe incorrecto hasta habilitar reglas en la base de datos.
+      const nuevas = checks.filter(c => !['general','medicamentos','documentos'].includes(c.value));
+      if (nuevas.length) {
+        aviso.textContent = 'Estas categorías ya aparecen en el catálogo, pero todavía requieren activar su cálculo y validación en Supabase antes de registrar el envío.';
+        return;
+      }
       const categorias={};
       for(const check of checks) {
         const value=document.getElementById('nicusa-carga-'+check.value)?.value.trim();
