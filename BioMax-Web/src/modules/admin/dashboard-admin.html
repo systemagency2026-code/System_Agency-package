@@ -1776,6 +1776,66 @@
       </section>
 
       <section id="view-reportes" class="dashboard-view" aria-label="Reportes operativos" hidden>
+        
+<article class="stat-card" style="margin-bottom:18px">
+  <h3 class="card-title">Reporte del transportador · NIC → USA</h3>
+  <p class="card-desc">
+    Consolidado por vuelo de todas las agencias.
+    Incluye inventario, peso real y pago al transportador.
+  </p>
+
+  <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:14px">
+    <label class="form-field">
+      <span class="form-label">Fecha del vuelo</span>
+      <select id="nicusa-rep-vuelo" class="form-input">
+        <option value="">Seleccioná un vuelo</option>
+      </select>
+    </label>
+
+    <button id="nicusa-rep-generar" class="btn-primary" type="button">
+      Generar reporte
+    </button>
+
+    <button id="nicusa-rep-csv" class="btn-secondary" type="button" disabled>
+      Exportar CSV
+    </button>
+
+    <button id="nicusa-rep-imprimir" class="btn-secondary" type="button" disabled>
+      Imprimir / PDF
+    </button>
+  </div>
+
+  <p id="nicusa-rep-estado" class="card-desc"
+     role="status" aria-live="polite"
+     style="margin-top:12px"></p>
+
+  <div class="table-responsive" style="overflow-x:auto;margin-top:14px">
+    <table id="nicusa-rep-tabla" class="data-table" style="min-width:1100px">
+      <thead>
+        <tr>
+          <th>Agencia</th>
+          <th>Nombre y apellido más teléfono</th>
+          <th>Dirección exacta de entrega</th>
+          <th>Ciudad, estado y ZIP</th>
+          <th>Inventario de artículos en paquete</th>
+          <th>Peso Managua–Miami (lbs)</th>
+          <th>Envío US$</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:20px;margin-top:14px">
+    <p><strong>Total libras:</strong>
+      <span id="nicusa-rep-peso">0.00</span>
+    </p>
+    <p><strong>Total transportador:</strong>
+      <span id="nicusa-rep-total">US$0.00</span>
+    </p>
+  </div>
+</article>
+
         <article class="stat-card" style="margin-bottom:18px">
           <h3 class="card-title">Reporte de paquetes por corte</h3>
           <p class="card-desc">Filtrá por palabra clave, agencia y modalidad. Pago por paquete: menos de 20 lb = US$0.20; desde 20 lb = US$1.00.</p>
