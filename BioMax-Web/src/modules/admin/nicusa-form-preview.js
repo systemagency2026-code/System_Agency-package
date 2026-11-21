@@ -109,7 +109,22 @@
         if(cat.startsWith('promo')) { if(datos.promo) throw Error('Solo un combo por declaración'); if(n!==1) throw Error('Seleccioná una unidad de combo'); datos.promo=cat; }
         else datos[cat]=n;
       }
-      if(!motor || !seleccion.length)return;
+            if(!motor || !seleccion.length)return;
+
+      const target=document.getElementById('nicusa-calc-preview');
+
+      if(!agenciaTarifada) {
+        if(target) target.textContent=
+          'Seleccioná una agencia para consultar las tarifas.';
+        return;
+      }
+
+      if((datos.medicamentos || 0) > 2) {
+        if(target) target.textContent=
+          'ATENCIÓN: El máximo permitido es 2.00 lbs reales de medicamentos por declaración. ' +
+          'Este envío requiere autorización especial de ViewMax.';
+        return;
+      }
       try {
         const beneficio=document.getElementById('nicusa-beneficio')?.value || 'ninguno';
         datos.beneficio=beneficio;
@@ -203,6 +218,12 @@
         const num=Number(value.replace(',','.'));
         if(!(num>0) || (check.value==='documentos'&&!Number.isInteger(num))) { aviso.textContent='Revisá los pesos y las unidades de documentos.';return; }
         categorias[check.value]=num;
+      }      // Validar máximo de medicamentos por declaración.
+      if ((categorias.medicamentos || 0) > 2) {
+        aviso.textContent =
+          'ATENCIÓN: El máximo permitido es 2.00 lbs reales de medicamentos por declaración. ' +
+          'Este envío requiere autorización especial de ViewMax.';
+        return;
       }
       const agenciaSeleccionada = document.getElementById('nicusa-agencia-admin')?.value || agenciaTarifada;
       if (!agenciaSeleccionada || agenciaSeleccionada !== agenciaTarifada ||
