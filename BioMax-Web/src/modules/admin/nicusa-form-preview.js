@@ -110,8 +110,17 @@
         else datos[cat]=n;
       }
             if(!motor || !seleccion.length)return;
+      const target = document.getElementById('nicusa-calc-preview');
 
-      const target=document.getElementById('nicusa-calc-preview');
+if ((datos.medicamentos || 0) > 2) {
+  if (target) {
+    target.textContent =
+      'ATENCIÓN: El máximo permitido es 2.00 lbs reales de medicamentos por declaración. ' +
+      'Este envío requiere autorización especial de ViewMax.';
+  }
+  return;
+}
+
 
       if(!agenciaTarifada) {
         if(target) target.textContent=
@@ -119,12 +128,7 @@
         return;
       }
 
-      if((datos.medicamentos || 0) > 2) {
-        if(target) target.textContent=
-          'ATENCIÓN: El máximo permitido es 2.00 lbs reales de medicamentos por declaración. ' +
-          'Este envío requiere autorización especial de ViewMax.';
-        return;
-      }
+   
       try {
         const beneficio=document.getElementById('nicusa-beneficio')?.value || 'ninguno';
         datos.beneficio=beneficio;
