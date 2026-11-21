@@ -1,5 +1,5 @@
 // BioMax NIC → USA · V7: registro real sujeto a migración y tarifas publicadas.
-// Categorías ilustrativas; no calcular cobros hasta disponer de tarifario autorizado.
+// Simulación con motor de tarifas. El registro conserva validaciones del backend V7.
 (function () {
   const catalogo = {
     general: { nombre: "Carga general", unidad: "lbs" },
@@ -10,10 +10,10 @@
     retorno: { nombre: "Retorno con etiqueta prepagada", unidad: "lbs" },
     insulina: { nombre: "Insulina y derivados", unidad: "unidades" },
     termico: { nombre: "Empaque térmico", unidad: "unidades" },
-    promo5: { nombre: "Combo promocional 5 lbs", unidad: "lbs" },
-    promo10: { nombre: "Combo promocional 10 lbs", unidad: "lbs" },
-    promo15: { nombre: "Combo promocional 15 lbs", unidad: "lbs" },
-    promo20: { nombre: "Combo promocional 20 lbs", unidad: "lbs" }
+    promo5: { nombre: "Combo promocional 5 lbs", unidad: "unidades" },
+    promo10: { nombre: "Combo promocional 10 lbs", unidad: "unidades" },
+    promo15: { nombre: "Combo promocional 15 lbs", unidad: "unidades" },
+    promo20: { nombre: "Combo promocional 20 lbs", unidad: "unidades" }
   };  function iniciar() {
     const grupo = document.getElementById("nicusa-categorias");
     const detalle = document.getElementById("nicusa-detalle-cargas");
@@ -38,6 +38,7 @@
         if (estadoTarifa) estadoTarifa.textContent = 'Seleccioná una agencia para consultar su tarifario.';
         recalcular(); return;
       }
+      if (!sb) { if (estadoTarifa) estadoTarifa.textContent = 'Supabase no está disponible.'; return; }
       if (estadoTarifa) estadoTarifa.textContent = 'Consultando tarifas de la agencia…';
       const {data,error} = await sb.from('nicusa_tarifas_agencia')
         .select('categoria,precio,unidad').eq('agencia_id',agenciaId).limit(30);
@@ -54,99 +55,99 @@
       recalcular(); mostrarCalculoPrevio();
     }
     const redondear = n => Math.ceil(n * 2 - 1e-9) / 2;
-    function recalcular() {
-      let totalReal = 0, totalFacturable = 0, pesosValidos = 0, totalImporte = 0;
-      let faltanTarifas = false;
-      const seleccionadas = [...grupo.querySelectorAll('input[type="checkbox"]:checked')].map(e => e.value);
-      detalle.querySelectorAll("input[data-categoria]").forEach(input => {
-        const categoria = input.dataset.categoria;
-        const dato = catalogo[categoria];
-        const valor = input.value.trim();
-        valores[categoria] = valor;
-        const formatoValido = /^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(valor);
-        const numero = formatoValido ? Number(valor.replace(",", ".")) : NaN;
-        const output = document.getElementById("nicusa-calc-" + categoria);
-        if (!valor || !formatoValido || !Number.isFinite(numero) || numero <= 0 || (dato.unidad === "unidades" && !Number.isInteger(numero))) {
-          if (output) output.textContent = dato.unidad === "pendiente" ? "Regla pendiente" : "—";
-          return;
-        }
-        const tarifa = tarifas[categoria];
-        const unidadEsperada = dato.unidad === 'lbs' ? 'lb' : 'unidad';
-        if (!tarifa || tarifa.unidad !== unidadEsperada || !Number.isFinite(Number(tarifa.precio))) faltanTarifas = true;
-        if (dato.unidad === "lbs") {
-          const fact = redondear(numero);
-          totalReal += numero;
-          totalFacturable += fact;
-          pesosValidos++;
-          if (tarifa && tarifa.unidad === 'lb' && Number.isFinite(Number(tarifa.precio))) {
-            const subtotal = Math.round(fact * Number(tarifa.precio) * 100) / 100;
-            totalImporte += subtotal;
-            if (output) output.textContent = fact.toFixed(2) + ' lbs × ' + dinero(Number(tarifa.precio)) + '/lb = ' + dinero(subtotal);
-          } else if (output) output.textContent = fact.toFixed(2) + ' lbs facturables · tarifa pendiente';
-        } else {
-          if (tarifa && tarifa.unidad === 'unidad' && Number.isFinite(Number(tarifa.precio))) {
-            const subtotal = Math.round(numero * Number(tarifa.precio) * 100) / 100;
-            totalImporte += subtotal;
-            if (output) output.textContent = numero + ' unidad(es) × ' + dinero(Number(tarifa.precio)) + ' = ' + dinero(subtotal);
-          } else if (output) output.textContent = numero + ' unidad(es) · tarifa pendiente';
-        }
-      });
-      real.textContent = pesosValidos ? totalReal.toFixed(2) + " lbs" : "—";
-      facturable.textContent = pesosValidos ? totalFacturable.toFixed(2) + " lbs" : "—";
-      if (importe) importe.textContent = seleccionadas.length && !faltanTarifas && agenciaTarifada &&
-        seleccionadas.every(c => c !== 'otros' && valores[c] && Number(valores[c].replace(',', '.')) > 0)
-        ? dinero(totalImporte) : '—';
-    }
-    function mostrarCalculoPrevio() {
-      const motor=window.BioMaxNICUSATarifas;
-      const seleccion=[...grupo.querySelectorAll('input[type="checkbox"]:checked')].map(x=>x.value);
-      const datos={};
-      for(const cat of seleccion) {
-        const input=document.getElementById('nicusa-carga-'+cat);
-        if(!input || !input.value.trim())return;
-        const n=Number(input.value.trim().replace(',','.'));
-        if(!Number.isFinite(n)||n<=0)return;
-        if(cat.startsWith('promo')) { if(datos.promo) throw Error('Solo un combo por declaración'); if(n!==1) throw Error('Seleccioná una unidad de combo'); datos.promo=cat; }
-        else datos[cat]=n;
+    const seleccion = () => [...grupo.querySelectorAll('input[type="checkbox"]:checked')].map(e => e.value);
+    const mensaje = () => document.getElementById('nicusa-calc-preview');
+    function obtenerDatos() {
+      const elegidas = seleccion();
+      const datos = {};
+      let promociones = 0;
+      for (const cat of elegidas) {
+        const input = document.getElementById('nicusa-carga-' + cat);
+        if (!input || !input.value.trim()) throw Error('Ingresá la cantidad o peso de ' + catalogo[cat].nombre + '.');
+        const texto = input.value.trim();
+        if (!/^(?:\d+(?:[.,]\d+)?|[.,]\d+)$/.test(texto)) throw Error('Valor inválido en ' + catalogo[cat].nombre + '.');
+        const n = Number(texto.replace(',', '.'));
+        if (!Number.isFinite(n) || n <= 0) throw Error('Ingresá un valor mayor que cero.');
+        if (catalogo[cat].unidad === 'unidades' && !Number.isInteger(n)) throw Error('La cantidad debe ser entera: ' + catalogo[cat].nombre + '.');
+        if (cat.startsWith('promo')) {
+          promociones++;
+          if (promociones > 1) throw Error('Solo se permite un combo promocional por declaración.');
+          if (n !== 1) throw Error('Seleccioná una unidad del combo promocional.');
+          datos.promo = cat;
+        } else datos[cat] = n;
       }
-            if(!motor || !seleccion.length)return;
-      const target = document.getElementById('nicusa-calc-preview');
-
-if ((datos.medicamentos || 0) > 2) {
-  if (target) {
-    target.textContent =
-      'ATENCIÓN: El máximo permitido es 2.00 lbs reales de medicamentos por declaración. ' +
-      'Este envío requiere autorización especial de ViewMax.';
-  }
-  return;
-}
-
-
-      if(!agenciaTarifada) {
-        if(target) target.textContent=
-          'Seleccioná una agencia para consultar las tarifas.';
+      datos.beneficio = document.getElementById('nicusa-beneficio')?.value || 'ninguno';
+      if (!datos.promo && datos.beneficio !== 'ninguno') throw Error('El beneficio incluido solo aplica con un combo promocional.');
+      if (datos.promo) {
+        const fisico = document.getElementById('nicusa-peso-fisico-promo');
+        const valor = fisico?.value.trim() || '';
+        if (!/^(?:\d+(?:[.,]\d+)?|[.,]\d+)$/.test(valor)) throw Error('Ingresá el peso físico real total del paquete promocional.');
+        const pesoFisico = Number(valor.replace(',', '.'));
+        if (!(pesoFisico > 0)) throw Error('El peso físico debe ser mayor que cero.');
+        const categoriasPesadas = (datos.general || 0) + (datos.medicamentos || 0) + (datos.retorno || 0);
+        if (pesoFisico + 1e-8 < categoriasPesadas) throw Error('El peso físico total no puede ser menor que la suma de los pesos declarados por categoría.');
+        datos.pesoOtros = Math.max(0, pesoFisico - categoriasPesadas);
+      }
+      return datos;
+    }
+    function preciosActuales() {
+      const precios = {};
+      for (const [cat, registro] of Object.entries(tarifas)) {
+        if (Number.isFinite(Number(registro.precio)) && Number(registro.precio) >= 0) precios[cat] = Number(registro.precio);
+      }
+      return precios;
+    }
+    function recalcular() { mostrarCalculoPrevio(); }
+    function mostrarCalculoPrevio() {
+      const target = mensaje();
+      const elegidas = seleccion();
+      const motor = window.BioMaxNICUSATarifas;
+      if (importe) importe.textContent = '—';
+      real.textContent = '—';
+      facturable.textContent = '—';
+      detalle.querySelectorAll('output[id^="nicusa-calc-"]').forEach(el => { el.textContent = 'Incluido en la simulación general'; });
+      if (!elegidas.length) { if (target) target.textContent = 'Seleccioná una o más categorías.'; return; }
+      if (!agenciaTarifada) { if (target) target.textContent = 'Seleccioná una agencia para consultar sus tarifas.'; return; }
+      if (!motor || typeof motor.calcularNICUSA !== 'function') {
+        if (target) target.textContent = 'No está cargado nicusa-tarifas.js. Revisá que se incluya antes de nicusa-form-preview.js.';
         return;
       }
-
-   
       try {
-        const beneficio=document.getElementById('nicusa-beneficio')?.value || 'ninguno';
-        datos.beneficio=beneficio;
-        const tarifasActuales={};
-        for(const [categoria,registro] of Object.entries(tarifas)) {
-          if(Number.isFinite(Number(registro.precio)) && Number(registro.precio)>=0) tarifasActuales[categoria]=Number(registro.precio);
+        const datos = obtenerDatos();
+        if ((datos.medicamentos || 0) > 2) throw Error('Medicamentos: máximo 2.00 lbs reales por declaración; requiere autorización especial de ViewMax.');
+        const precio = motor.calcularNICUSA(datos, preciosActuales());
+        real.textContent = precio.pesoReal.toFixed(2) + ' lbs';
+        facturable.textContent = precio.pesoFacturable.toFixed(2) + ' lbs';
+        if (importe) importe.textContent = dinero(precio.importe);
+        if (target) target.textContent = 'SIMULACIÓN: ' + dinero(precio.importe) +
+          ' · Peso real: ' + precio.pesoReal.toFixed(2) + ' lbs · Peso facturable: ' + precio.pesoFacturable.toFixed(2) +
+          ' lbs. ' + precio.lineas.map(l => l.concepto + ': ' + dinero(l.importe)).join(' · ') +
+          '. El cobro definitivo se valida en Supabase al registrar.';
+        for (const cat of elegidas) {
+          const out = document.getElementById('nicusa-calc-' + cat);
+          if (!out) continue;
+          if (cat.startsWith('promo')) out.textContent = '1 combo · precio fijo: ' + dinero(preciosActuales()[cat] ?? motor.TARIFAS[cat]) + ' · peso real indicado por separado';
+          else if (cat === 'general' || cat === 'medicamentos') {
+            const n = datos[cat] || 0;
+            out.textContent = n.toFixed(2) + ' lbs reales · ' + redondear(n).toFixed(2) + ' lbs redondeadas (ver simulación total)';
+          } else out.textContent = 'Cantidad: ' + datos[cat] + ' · ver simulación total';
         }
-        const precio=motor.calcularNICUSA(datos,tarifasActuales);
-        const target=document.getElementById('nicusa-calc-preview');
-        if(target)target.textContent='Simulación (tarifas de agencia disponibles): US$'+precio.importe.toFixed(2)+' · Peso real '+precio.pesoReal.toFixed(2)+' lbs · Peso facturable '+precio.pesoFacturable.toFixed(2)+' lbs. No representa aún el cobro de Supabase.';
-      } catch(e) {
-        const target=document.getElementById('nicusa-calc-preview');
-        if(target)target.textContent='Validación: '+e.message;
+      } catch (e) {
+        if (target) target.textContent = 'Validación: ' + e.message;
       }
     }
     function renderizar() {
       const seleccionadas = [...grupo.querySelectorAll('input[type="checkbox"]:checked')].map(e => e.value);
       detalle.replaceChildren();
+      const promos = seleccionadas.filter(c => c.startsWith('promo'));
+      const beneficioSelector = document.getElementById('nicusa-beneficio');
+      if (beneficioSelector) {
+        beneficioSelector.disabled = promos.length === 0;
+        if (!promos.length) beneficioSelector.value = 'ninguno';
+        const pasaporte = beneficioSelector.querySelector('option[value="pasaportes"]');
+        if (pasaporte) pasaporte.disabled = promos.includes('promo5');
+        if (promos.includes('promo5') && beneficioSelector.value === 'pasaportes') beneficioSelector.value = 'ninguno';
+      }
       seleccionadas.forEach(categoria => {
         const dato = catalogo[categoria];
         if (!dato) return;
@@ -180,6 +181,27 @@ if ((datos.medicamentos || 0) > 2) {
         fila.appendChild(resultado);
         detalle.appendChild(fila);
       });
+      if (promos.length) {
+        const filaPeso = document.createElement('div');
+        filaPeso.className = 'form-field';
+        filaPeso.style.cssText = 'border:1px solid #dbe3ed;border-radius:12px;padding:12px;';
+        const etiqueta = document.createElement('label');
+        etiqueta.className = 'form-label';
+        etiqueta.htmlFor = 'nicusa-peso-fisico-promo';
+        etiqueta.textContent = 'Peso físico REAL total del paquete promocional (lbs) *';
+        const inputPeso = document.createElement('input');
+        inputPeso.className = 'form-input';
+        inputPeso.id = 'nicusa-peso-fisico-promo';
+        inputPeso.type = 'text';
+        inputPeso.inputMode = 'decimal';
+        inputPeso.pattern = '[0-9]+([.,][0-9]+)?';
+        inputPeso.placeholder = 'Ej. 4.74 (no son las 5 lbs del combo)';
+        inputPeso.required = true;
+        inputPeso.value = valores.pesoFisicoPromo || '';
+        inputPeso.addEventListener('input', () => { valores.pesoFisicoPromo = inputPeso.value; mostrarCalculoPrevio(); });
+        filaPeso.append(etiqueta, inputPeso);
+        detalle.appendChild(filaPeso);
+      }
       estado.textContent = seleccionadas.length ? seleccionadas.length + " tipo(s) de carga seleccionado(s). " : "Ninguna categoría seleccionada.";
       recalcular();
       mostrarCalculoPrevio();
@@ -209,10 +231,10 @@ if ((datos.medicamentos || 0) > 2) {
       if(!form.reportValidity()) return;
       const checks=[...grupo.querySelectorAll('input[type="checkbox"]:checked')];
       if(!checks.length || checks.some(c=>c.value==='otros')) { aviso.textContent='Seleccioná una categoría habilitada.';return; }
-      // Evitar registrar una declaración con importe incorrecto hasta habilitar reglas en la base de datos.
+      // Seguridad: la base V7 solo confirma soporte para las tres categorías originales.
       const nuevas = checks.filter(c => !['general','medicamentos','documentos'].includes(c.value));
       if (nuevas.length) {
-        aviso.textContent = 'Estas categorías ya aparecen en el catálogo, pero todavía requieren activar su cálculo y validación en Supabase antes de registrar el envío.';
+        aviso.textContent = 'La simulación está disponible, pero el registro de estas categorías requiere actualizar y verificar el cálculo del servidor en Supabase. No se guardará un importe incorrecto.';
         return;
       }
       const categorias={};
@@ -222,7 +244,8 @@ if ((datos.medicamentos || 0) > 2) {
         const num=Number(value.replace(',','.'));
         if(!(num>0) || (check.value==='documentos'&&!Number.isInteger(num))) { aviso.textContent='Revisá los pesos y las unidades de documentos.';return; }
         categorias[check.value]=num;
-      }      // Validar máximo de medicamentos por declaración.
+      }
+      // Validar máximo de medicamentos por declaración.
       if ((categorias.medicamentos || 0) > 2) {
         aviso.textContent =
           'ATENCIÓN: El máximo permitido es 2.00 lbs reales de medicamentos por declaración. ' +
@@ -235,7 +258,7 @@ if ((datos.medicamentos || 0) > 2) {
         aviso.textContent = 'No se puede registrar sin las tarifas vigentes de la agencia. Revisá el tarifario.';
         return;
       }
-      const foto=document.getElementById('nicusa-foto').files[0];
+      const foto=document.getElementById('nicusa-foto')?.files?.[0];
       if(!foto || !['image/jpeg','image/png','image/webp'].includes(foto.type) || foto.size>5242880) { aviso.textContent='La foto debe ser JPG, PNG o WebP y máximo 5 MB.';return; }
       if(boton) boton.disabled=true;
       aviso.textContent='Registrando envío…';
@@ -268,7 +291,7 @@ if ((datos.medicamentos || 0) > 2) {
           confirmacion.scrollIntoView({behavior:'smooth',block:'center'});
         }
         window.dispatchEvent(new CustomEvent('biomax:nicusa-registrado'));
-        form.reset(); renderizar();
+        form.reset(); Object.keys(valores).forEach(k => delete valores[k]); renderizar();
       } catch(e) { aviso.textContent='No se pudo registrar: '+e.message; }
       finally { if(boton) boton.disabled=false; }
     });
