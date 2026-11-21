@@ -119,17 +119,25 @@
         real.textContent = precio.pesoReal.toFixed(2) + ' lbs';
         facturable.textContent = precio.pesoFacturable.toFixed(2) + ' lbs';
         if (importe) importe.textContent = dinero(precio.importe);
+        const soloGeneral = elegidas.length === 1 && elegidas[0] === 'general';
+        const pesoGeneralRedondeado = soloGeneral ? redondear(datos.general) : 0;
+        const minimoAplicado = soloGeneral && precio.pesoFacturable > pesoGeneralRedondeado + 1e-8;
+        const explicacionFacturable = minimoAplicado
+          ? ' · Se aplica el mínimo de facturación de ' + precio.pesoFacturable.toFixed(2) + ' lbs; el peso redondeado sigue siendo ' + pesoGeneralRedondeado.toFixed(2) + ' lbs.'
+          : '';
         if (target) target.textContent = 'SIMULACIÓN: ' + dinero(precio.importe) +
           ' · Peso real: ' + precio.pesoReal.toFixed(2) + ' lbs · Peso facturable: ' + precio.pesoFacturable.toFixed(2) +
           ' lbs. ' + precio.lineas.map(l => l.concepto + ': ' + dinero(l.importe)).join(' · ') +
-          '. El cobro definitivo se valida en Supabase al registrar.';
+          explicacionFacturable + ' El cobro definitivo se valida en Supabase al registrar.';
         for (const cat of elegidas) {
           const out = document.getElementById('nicusa-calc-' + cat);
           if (!out) continue;
           if (cat.startsWith('promo')) out.textContent = '1 combo · precio fijo: ' + dinero(preciosActuales()[cat] ?? motor.TARIFAS[cat]) + ' · peso real indicado por separado';
           else if (cat === 'general' || cat === 'medicamentos') {
             const n = datos[cat] || 0;
-            out.textContent = n.toFixed(2) + ' lbs reales · ' + redondear(n).toFixed(2) + ' lbs redondeadas (ver simulación total)';
+            out.textContent = n.toFixed(2) + ' lbs reales · ' + redondear(n).toFixed(2) +
+              ' lbs tras redondeo por categoría' +
+              (cat === 'general' && minimoAplicado ? ' · Mínimo facturable aplicado: ' + precio.pesoFacturable.toFixed(2) + ' lbs' : ' · Consultá el peso facturable total abajo');
           } else out.textContent = 'Cantidad: ' + datos[cat] + ' · ver simulación total';
         }
       } catch (e) {
