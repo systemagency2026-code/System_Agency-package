@@ -938,11 +938,17 @@ async function cargarCortesAgenciaConBultos(agenciaId) {
   const grid = $("grid-cortes-tarjetas");
   if (!grid) return;
 
-  const { data: cortes, error } = await supabase
-    .from("cortes_contenedores")
-    .select("*")
-    .eq("agencia_id", agenciaId)
-    .order("created_at", { ascending: false });
+  const cortes = [];
+  let error = null;
+  for (let offset = 0; offset < 100000; offset += 1000) {
+    const r = await supabase.from('cortes_contenedores').select('*')
+      .eq('agencia_id', agenciaId).order('created_at', {ascending:false})
+      .range(offset, offset + 999);
+    if (r.error) { error = r.error; break; }
+    cortes.push(...(r.data || []));
+    if (!r.data || r.data.length < 1000) break;
+    if (offset >= 99000) { error = new Error('Demasiados contenedores para consultar'); break; }
+  }
 
   if (error || !cortes || cortes.length === 0) {
     cortesTarjetasCache = [];
@@ -951,14 +957,27 @@ async function cargarCortesAgenciaConBultos(agenciaId) {
     return;
   }
 
+  // Leer todas las paginas de los paquetes de esta agencia, no solo las primeras 1000 filas.
   const ids = cortes.map((c) => c.id);
-  const { data: bultos } = await supabase
-    .from("paquetes_bultos")
-    .select("*")
-    .in("corte_id", ids);
+  const bultos = [];
+  for (let i = 0; i < ids.length; i += 60) {
+    const grupo = ids.slice(i, i + 60);
+    for (let offset = 0; offset < 100000; offset += 1000) {
+      const { data, error: errorBultos } = await supabase
+        .from("paquetes_bultos").select("*")
+        .in("corte_id", grupo).range(offset, offset + 999);
+      if (errorBultos) {
+        grid.textContent = "No se pudieron consultar los paquetes: " + errorBultos.message;
+        return;
+      }
+      bultos.push(...(data || []));
+      if (!data || data.length < 1000) break;
+      if (offset >= 99000) { grid.textContent = "Hay demasiados paquetes para consultar."; return; }
+    }
+  }
 
   bultosPorCorteCache = {};
-  (bultos || []).forEach((b) => {
+  bultos.forEach((b) => {
     const key = String(b.corte_id);
     if (!bultosPorCorteCache[key]) bultosPorCorteCache[key] = [];
     bultosPorCorteCache[key].push(b);
@@ -966,6 +985,7 @@ async function cargarCortesAgenciaConBultos(agenciaId) {
 
   cortesTarjetasCache = cortes;
   renderGridCortes(cortesTarjetasCache);
+  if ($('buscar-corte-input')?.value.trim()) $('buscar-corte-input').dispatchEvent(new Event('input'));
 }
 
 function renderGridCortes(cortes) {
