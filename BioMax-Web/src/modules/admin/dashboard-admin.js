@@ -1120,39 +1120,13 @@ async function cargarCortesGlobalesAdmin() {
 
   const agVista = getAgenciaVistaActual();
 
-  async function fetchCortes(orderCol) {
-    let query = supabase.from("cortes_contenedores").select("*");
-    if (agVista) query = query.eq("agencia_id", agVista.id);
-    if (orderCol) query = query.order(orderCol, { ascending: false });
-    return query;
-  }
-
+  // Paginacion completa: no limitar el listado a los primeros 1000 contenedores.
   let cortes = null;
   let error = null;
-
-  for (const col of ["fecha_corte", "created_at", "creada_en"]) {
-    const res = await fetchCortes(col);
-    if (!res.error) {
-      cortes = res.data;
-      error = null;
-      break;
-    }
-    const msg = String(res.error.message || "");
-    if (msg.includes("does not exist") || msg.includes("column")) {
-      error = res.error;
-      continue;
-    }
-    error = res.error;
-    break;
-  }
-
-  if (error || cortes == null) {
-    let query = supabase.from("cortes_contenedores").select("*");
-    if (agVista) query = query.eq("agencia_id", agVista.id);
-    const res = await query;
-    cortes = res.data;
-    error = res.error;
-  }
+  try {
+    cortes = await repLeerTodo('cortes_contenedores', '*');
+    if (agVista) cortes = cortes.filter(c => String(c.agencia_id) === String(agVista.id));
+  } catch (e) { error = e; }
 
   if (error) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="10">Error: ${escapeHtml(error.message)}</td></tr>`;
@@ -1220,6 +1194,7 @@ async function cargarCortesGlobalesAdmin() {
   });
 
   aplicarFiltrosCortes();
+  if ($('cf-corte')?.value.trim()) biomaxActualizarBusquedaGlobal();
 
   tbody.querySelectorAll(".select-estado-envio").forEach((sel) => {
     sel.addEventListener("change", async (e) => {
@@ -2307,6 +2282,59 @@ async function loadSolicitudesPendientes() {
 }
 
 
+// Busqueda global de paquetes. Se consultan todas las paginas visibles para el rol
+// autenticado; la seguridad real corresponde a las politicas RLS de Supabase.
+let biomaxBusquedaCortes = new Map();
+let biomaxBusquedaVersion = 0;
+let biomaxBusquedaTimer = null;
+async function biomaxLeerPaquetesVisibles(cortes) {
+  const mapa = new Map();
+  const ids = cortes.map(c => String(c.id)).filter(Boolean);
+  for (let i = 0; i < ids.length; i += 60) {
+    const grupo = ids.slice(i, i + 60);
+    for (let offset = 0; offset < 100000; offset += 1000) {
+      const {data, error} = await supabase.from('paquetes_bultos')
+        .select('corte_id,tracking,cliente_nombre,estado')
+        .in('corte_id', grupo).range(offset, offset + 999);
+      if (error) throw error;
+      for (const b of data || []) {
+        const id = String(b.corte_id);
+        if (!mapa.has(id)) mapa.set(id, []);
+        mapa.get(id).push(b);
+      }
+      if (!data || data.length < 1000) break;
+      if (offset >= 99000) throw new Error('La búsqueda supera el límite de consulta.');
+    }
+  }
+  return mapa;
+}
+async function biomaxActualizarBusquedaGlobal() {
+  const version = ++biomaxBusquedaVersion;
+  const input = $('cf-corte');
+  const q = repNormalizar(input?.value?.trim() || '');
+  if (!q) { biomaxBusquedaCortes = new Map(); aplicarFiltrosCortes(); return; }
+  if ($('cf-conteo')) $('cf-conteo').textContent = 'Buscando en todos los paquetes autorizados...';
+  try {
+    // Recarga completa de cortes, sin limitarse a la primera pagina del panel.
+    const cortes = await repLeerTodo('cortes_contenedores', 'id,agencia_id,tipo_envio,numero_corte,codigo_ref,estado');
+    const agVista = getAgenciaVistaActual();
+    const permitidos = agVista ? cortes.filter(c => String(c.agencia_id) === String(agVista.id)) : cortes;
+    const paquetes = await biomaxLeerPaquetesVisibles(permitidos);
+    if (version !== biomaxBusquedaVersion) return;
+    biomaxBusquedaCortes = new Map();
+    for (const c of permitidos) {
+      const encontrados = (paquetes.get(String(c.id)) || []).filter(b =>
+        repNormalizar([b.tracking,b.cliente_nombre,b.estado].join(' ')).includes(q));
+      if (encontrados.length) biomaxBusquedaCortes.set(String(c.id), encontrados);
+    }
+    aplicarFiltrosCortes();
+  } catch (e) {
+    if (version !== biomaxBusquedaVersion) return;
+    biomaxBusquedaCortes = new Map();
+    if ($('cf-conteo')) $('cf-conteo').textContent = 'Error de búsqueda: ' + e.message;
+    console.error('Busqueda global BioMax:', e);
+  }
+}
 // Filtros de contenedores: solo afectan la visualización, nunca la base de datos.
 function aplicarFiltrosCortes() {
   const cuerpo=$("tabla-admin-cortes-body");
@@ -2319,22 +2347,42 @@ function aplicarFiltrosCortes() {
     if(fila.classList.contains("empty-row"))continue;
     const c=fila.cells;
     if(c.length<9)continue;
-    const ok=(!filtroCorte||repNormalizar(c[2].textContent).includes(filtroCorte))&&
+    const id=fila.querySelector(".btn-gestionar-bultos")?.dataset.id || "";
+    const coincidePaquete = biomaxBusquedaCortes.has(id);
+    const ok=(!filtroCorte||repNormalizar(c[2].textContent).includes(filtroCorte)||coincidePaquete)&&
       (!filtroAgencia||repNormalizar(c[0].textContent).includes(filtroAgencia))&&
       (!filtroTipo||repModalidad(c[1].textContent)===filtroTipo)&&
       (!filtroFecha||repNormalizar(c[3].textContent).includes(filtroFecha))&&
       (!filtroEstado||repNormalizar(c[7].textContent).includes(filtroEstado));
     fila.hidden=!ok;fila.style.display=ok?"":"none";
-    if(ok)visibles++;
+    if(ok){
+      visibles++;
+      const matches = biomaxBusquedaCortes.get(id) || [];
+      const celda = c[2];
+      celda.querySelector(".biomax-coincidencias")?.remove();
+      if(filtroCorte && matches.length){
+        const small=document.createElement("small"); small.className="biomax-coincidencias";
+        small.style.display="block"; small.style.marginTop="5px";
+        small.textContent=matches.slice(0,4).map(b => `${b.tracking || "Sin tracking"} · ${b.cliente_nombre || "Sin nombre"}`).join(" | ") + (matches.length>4?` (+${matches.length-4} más)`:"");
+        celda.appendChild(small);
+      }
+    } else { c[2].querySelector(".biomax-coincidencias")?.remove(); }
   }
   if($("cf-conteo"))$("cf-conteo").textContent=visibles+" contenedor(es) visible(s)";
 }
 function setupFiltrosCortes() {
   for(const id of ["cf-corte","cf-agencia","cf-tipo","cf-fecha","cf-estado"]) {
-    $(id)?.addEventListener(id==="cf-tipo"||id==="cf-estado"?"change":"input",aplicarFiltrosCortes);
+    if(id === 'cf-corte') {
+      $(id)?.addEventListener('input', () => {
+        clearTimeout(biomaxBusquedaTimer);
+        biomaxBusquedaTimer = setTimeout(biomaxActualizarBusquedaGlobal, 350);
+      });
+    } else $(id)?.addEventListener(id==="cf-tipo"||id==="cf-estado"?"change":"input",aplicarFiltrosCortes);
   }
   $("cf-limpiar")?.addEventListener("click",()=>{
     for(const id of ["cf-corte","cf-agencia","cf-tipo","cf-fecha","cf-estado"])if($(id))$(id).value="";
+    biomaxBusquedaVersion++;
+    biomaxBusquedaCortes = new Map();
     aplicarFiltrosCortes();
   });
 }
