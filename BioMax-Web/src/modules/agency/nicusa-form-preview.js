@@ -252,6 +252,95 @@
       if(boton) boton.disabled = !(data||[]).length;
       aviso.textContent = (data||[]).length ? 'Seleccioná el vuelo y completá todos los campos.' : 'No hay vuelos publicados. Contactá al SuperAdmin.';
     }
+
+    // Agenda NIC-USA: sugerencias privadas, sin seleccionar automáticamente.
+    function iniciarAgendaDestinatarios() {
+      const nombre = document.getElementById('nicusa-dest-nombre');
+      const telefono = document.getElementById('nicusa-dest-tel');
+      if (!nombre || !telefono) return;
+      const lista = document.createElement('div');
+      lista.id = 'nicusa-destinatarios-sugerencias';
+      lista.setAttribute('role', 'listbox');
+      lista.setAttribute('aria-label', 'Destinatarios guardados de tu agencia');
+      lista.style.cssText = 'margin-top:8px;display:none;border:1px solid #cbd5e1;border-radius:10px;background:#fff;max-height:260px;overflow:auto;';
+      telefono.closest('.form-field')?.append(lista);
+      let secuencia = 0;
+      let espera;
+      let completando = false;
+      function ocultar() { lista.replaceChildren(); lista.style.display = 'none'; }
+      function completar(c) {
+        // Invalidar consultas pendientes y evitar que el autollenado reactive sugerencias.
+        secuencia++;
+        clearTimeout(espera);
+        completando = true;
+        const campos = {
+          'nicusa-dest-nombre': c.nombre,
+          'nicusa-dest-tel': c.telefono,
+          'nicusa-calle': c.calle,
+          'nicusa-apto': c.apartamento,
+          'nicusa-ciudad': c.ciudad,
+          'nicusa-estado': c.estado,
+          'nicusa-zip': c.zip
+        };
+        for (const [id, valor] of Object.entries(campos)) {
+          const el = document.getElementById(id);
+          if (el) {
+            el.value = valor || '';
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+        ocultar();
+        completando = false;
+      }
+      async function buscar() {
+        const solicitud = ++secuencia;
+        const qNombre = nombre.value.trim();
+        const qTelefono = telefono.value.trim();
+        if (Math.max(qNombre.length, qTelefono.length) < 3) { ocultar(); return; }
+        const sb = obtenerSupabase();
+        const agenciaId = agenciaSesion();
+        if (!sb || !agenciaId) { ocultar(); return; }
+        // RLS en Supabase restringe también la lectura por agencia.
+        const { data, error } = await sb.from('nicusa_destinatarios_agencia')
+          .select('id,nombre,telefono,calle,apartamento,ciudad,estado,zip')
+          .eq('agencia_id', agenciaId)
+          .order('ultimo_uso_en', { ascending: false })
+          .limit(100);
+        if (solicitud !== secuencia) return;
+        if (error) { console.error('BioMax agenda: consulta fallida', error); ocultar(); return; }
+        const normalizar = v => String(v || '').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const digitos = v => String(v || '').replace(/\D/g, '');
+        const resultados = (data || []).filter(c =>
+          (qNombre.length >= 3 && normalizar(c.nombre).includes(normalizar(qNombre))) ||
+          (digitos(qTelefono).length >= 3 && digitos(c.telefono).includes(digitos(qTelefono)))
+        ).slice(0, 8);
+        ocultar();
+        for (const c of resultados) {
+          const opcion = document.createElement('button');
+          opcion.type = 'button';
+          opcion.setAttribute('role', 'option');
+          opcion.style.cssText = 'display:block;width:100%;text-align:left;padding:10px;border:0;border-bottom:1px solid #e2e8f0;background:#fff;cursor:pointer;white-space:normal';
+          opcion.textContent = `${c.nombre} · ${c.telefono} · ${[c.calle,c.apartamento,c.ciudad,c.estado,c.zip].filter(Boolean).join(', ')}`;
+          opcion.addEventListener('click', () => completar(c));
+          lista.append(opcion);
+        }
+        lista.style.display = resultados.length ? 'block' : 'none';
+      }
+      function programar() {
+        if (completando) return;
+        // Invalidar inmediatamente resultados de consultas anteriores.
+        secuencia++;
+        clearTimeout(espera);
+        ocultar();
+        espera = setTimeout(buscar, 250);
+      }
+      nombre.addEventListener('input', programar);
+      telefono.addEventListener('input', programar);
+      form?.addEventListener('reset', () => { secuencia++; ocultar(); });
+    }
+    iniciarAgendaDestinatarios();
+
     form?.addEventListener('submit',async event=>{
       event.preventDefault();
       if(!form.reportValidity()) return;
