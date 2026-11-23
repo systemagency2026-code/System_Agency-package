@@ -35,7 +35,7 @@
       Object.keys(tarifas).forEach(k => delete tarifas[k]);
       if (importe) importe.textContent = '—';
       if (!agenciaId) {
-        if (estadoTarifa) estadoTarifa.textContent = 'Seleccioná una agencia para consultar su tarifario.';
+        if (estadoTarifa) estadoTarifa.textContent = 'No se ha identificado la agencia de tu sesión.';
         recalcular(); return;
       }
       if (!sb) { if (estadoTarifa) estadoTarifa.textContent = 'Supabase no está disponible.'; return; }
@@ -50,8 +50,8 @@
       (data || []).forEach(t => { tarifas[t.categoria] = t; });
       agenciaTarifada = agenciaId;
       if (estadoTarifa) estadoTarifa.textContent = (data || []).length
-        ? 'Tarifas vigentes de la agencia seleccionada.'
-        : 'Esta agencia todavía no tiene tarifas configuradas.';
+        ? 'Tarifas vigentes de tu agencia.'
+        : 'Tu agencia todavía no tiene tarifas configuradas.';
       recalcular(); mostrarCalculoPrevio();
     }
     const redondear = n => Math.ceil(n * 2 - 1e-9) / 2;
@@ -107,7 +107,7 @@
       facturable.textContent = '—';
       detalle.querySelectorAll('output[id^="nicusa-calc-"]').forEach(el => { el.textContent = 'Incluido en la simulación general'; });
       if (!elegidas.length) { if (target) target.textContent = 'Seleccioná una o más categorías.'; return; }
-      if (!agenciaTarifada) { if (target) target.textContent = 'Seleccioná una agencia para consultar sus tarifas.'; return; }
+      if (!agenciaTarifada) { if (target) target.textContent = 'Esperando las tarifas de tu agencia.'; return; }
       if (!motor || typeof motor.calcularNICUSA !== 'function') {
         if (target) target.textContent = 'No está cargado nicusa-tarifas.js. Revisá que se incluya antes de nicusa-form-preview.js.';
         return;
@@ -224,7 +224,18 @@
     const vuelo = document.getElementById('nicusa-vuelo');
     const boton = form?.querySelector('button[type="submit"]');
     const sb = window.supabase;
+    // La agencia proviene del panel autenticado, no de un selector de SuperAdmin.
+    function agenciaSesion() { return String(window.biomaxAgenciaActual?.id || ''); }
+    async function sincronizarAgencia() {
+      const id = agenciaSesion();
+      if (id && id !== agenciaTarifada) await cargarTarifas(id);
+      return id;
+    }
+    window.addEventListener('biomax:agencia-lista', () => { sincronizarAgencia(); });
+    if (agenciaSesion()) sincronizarAgencia();
     async function cargarVuelos() {
+      if (vuelo) vuelo.disabled = true;
+      if (boton) boton.disabled = true;
       if (!sb) { aviso.textContent = 'No está disponible la conexión con Supabase.'; return; }
       const {data,error} = await sb.from('nicusa_vuelos').select('id,fecha').eq('publicado',true).gte('fecha',new Date().toISOString().slice(0,10)).order('fecha').limit(30);
       if(error) { aviso.textContent = 'No se pudieron consultar los vuelos: ' + error.message; return; }
@@ -260,7 +271,7 @@
           'Este envío requiere autorización especial de ViewMax.';
         return;
       }
-      const agenciaSeleccionada = document.getElementById('nicusa-agencia-admin')?.value || agenciaTarifada;
+      const agenciaSeleccionada = agenciaSesion();
       if (!agenciaSeleccionada || agenciaSeleccionada !== agenciaTarifada ||
           checks.some(c => !tarifas[c.value] || tarifas[c.value].unidad !== (c.value === 'documentos' ? 'unidad' : 'lb'))) {
         aviso.textContent = 'No se puede registrar sin las tarifas vigentes de la agencia. Revisá el tarifario.';
@@ -275,14 +286,10 @@
       try {
         const {data:{user},error:authError}=await sb.auth.getUser();
         if(authError || !user) throw new Error('Sesión no válida');
-        const {data:perfil,error:perfilError}=await sb.from('perfiles').select('agencia_id,rol,activo').eq('id',user.id).single();
-        if(perfilError || !perfil?.activo) throw new Error('Perfil no autorizado');
-        let agenciaId=perfil.agencia_id;
-        if(perfil.rol==='admin') {
-          const selector=document.getElementById('nicusa-agencia-admin');
-          agenciaId=selector?.value;
-          if(!agenciaId) throw new Error('Seleccioná una agencia');
-        } else if(perfil.rol!=='agente' || !agenciaId) throw new Error('Acceso no autorizado');
+        // El panel de agencia ya vinculó esta sesión con su agencia.
+        // Supabase RLS debe validar en el servidor que el usuario puede insertar aquí.
+        const agenciaId = agenciaSesion();
+        if (!agenciaId || agenciaId !== agenciaTarifada) throw new Error('No se identificó tu agencia o sus tarifas');
         const extension=foto.type==='image/png'?'png':foto.type==='image/webp'?'webp':'jpg';
         const ruta=agenciaId+'/'+crypto.randomUUID()+'.'+extension;
         const {error:uploadError}=await sb.storage.from('nicusa-fotos').upload(ruta,foto,{contentType:foto.type,upsert:false});
@@ -301,29 +308,14 @@
         window.dispatchEvent(new CustomEvent('biomax:nicusa-registrado'));
         form.reset(); Object.keys(valores).forEach(k => delete valores[k]); renderizar();
       } catch(e) { aviso.textContent='No se pudo registrar: '+e.message; }
-      finally { if(boton) boton.disabled=false; }
-    });
-    if(sb) sb.from('agencias').select('id,nombre').eq('estado','activa').order('nombre').limit(100).then(({data,error})=>{
-      const sel=document.getElementById('nicusa-agencia-admin');
-      if(!sel) return;
-      sel.replaceChildren(new Option(error?'Error cargando agencias':'Seleccioná una agencia',''));
-      (data||[]).forEach(a=>sel.add(new Option(a.nombre,a.id)));
+      finally { if(boton) boton.disabled = !vuelo?.value || vuelo.disabled; }
     });
     if (sb) cargarVuelos();
-    const selectorAgencia = document.getElementById('nicusa-agencia-admin');
-    if (selectorAgencia) {
-      selectorAgencia.addEventListener('change', () => cargarTarifas(selectorAgencia.value));
-    } else if (sb) {
-      sb.auth.getUser().then(async ({data,error}) => {
-        if (error || !data?.user) { if (estadoTarifa) estadoTarifa.textContent = 'Sesión no disponible.'; return; }
-        const {data:perfil,error:err} = await sb.from('perfiles').select('agencia_id,activo').eq('id',data.user.id).single();
-        if (err || !perfil?.activo || !perfil.agencia_id) {
-          if (estadoTarifa) estadoTarifa.textContent = 'No se pudo identificar la agencia.';
-          return;
-        }
-        cargarTarifas(perfil.agencia_id);
-      });
-    }
+    // Si el panel terminó de autenticar antes que este módulo, sincronizar ahora.
+    if (agenciaSesion()) sincronizarAgencia();
+    grupo.addEventListener('input', event => {
+      if (event.target?.matches('input[id^="nicusa-carga-"]')) valores[event.target.dataset.categoria] = event.target.value;
+    });
     grupo.addEventListener("change", renderizar);
     renderizar();
   }

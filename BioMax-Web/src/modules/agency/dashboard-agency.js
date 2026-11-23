@@ -626,6 +626,16 @@ async function initAgenteDashboard() {
     }
 
     agenciaActual = agencia;
+    // Identidad de la agencia autenticada, disponible para los módulos NIC → USA.
+    // Se publica antes de iniciar la carga de las demás vistas.
+    window.biomaxAgenciaActual = {
+      id: agencia.id,
+      nombre: agencia.nombre || "",
+      codigo: agencia.codigo || "",
+    };
+    window.dispatchEvent(new CustomEvent("biomax:agencia-lista", {
+      detail: { ...window.biomaxAgenciaActual },
+    }));
     poblarDatosPerfilAgencia(agencia);
     await Promise.all([
       cargarDashboardAgencia(agencia.id),

@@ -18,7 +18,6 @@ function calcularNICUSA(datos, precios={}) {
  if(retorno>0&&datos.retornoIncluido===false)throw Error('Retorno no habilitado');
  const lineas=[];const agregar=(nombre,importe)=>{importe=money(importe);if(importe)lineas.push({concepto:nombre,importe})};
  let totalReal=general+med+retorno;
- // Los servicios por unidad no tienen peso implícito; registrar peso físico por separado cuando aplique.
  totalReal+=nonneg(datos.pesoOtros,'pesoOtros');
  let pesoFacturable=0;
  if(promo){
@@ -27,7 +26,6 @@ function calcularNICUSA(datos, precios={}) {
    if(promo==='promo5'&&datos.beneficio==='pasaportes')throw Error('Promo 5 lbs no incluye pasaporte');
    if(datos.beneficio==='documentos'&&docs<1)throw Error('El beneficio de documentos requiere un documento');
    if(datos.beneficio==='pasaportes'&&pas<1)throw Error('El beneficio de pasaporte requiere un pasaporte');
-   if(medIncluido&&med>cfg.med+1e-9) { /* exceso medicinal facturable */ }
    const base=Number(p[promo]);agregar('Combo '+cfg.lbs+' lbs',base);
    const descuentoMed=medIncluido?Math.min(med,cfg.med):0;
    const medExtra=Math.max(0,med-descuentoMed-nonneg(datos.excesoMedicamentos,'excesoMedicamentos'));
@@ -36,7 +34,6 @@ function calcularNICUSA(datos, precios={}) {
    agregar('Medicamentos adicionales',peso(medExtra)*Number(p.medicamentos));
    agregar('Documentos adicionales',docsExtra*Number(p.documentos));
    agregar('Pasaportes adicionales',pasExtra*Number(p.pasaportes));
-   // Excedente sobre capacidad: distribuir entre categorías usando pesos explícitos de exceso.
    const excedente=Math.max(0,totalReal-cfg.lbs);
    if(excedente>1e-9){
      const eg=nonneg(datos.excesoGeneral,'excesoGeneral'),em=nonneg(datos.excesoMedicamentos,'excesoMedicamentos');
@@ -46,8 +43,7 @@ function calcularNICUSA(datos, precios={}) {
    }
    pesoFacturable=cfg.lbs+peso(excedente);
  }else{
-   const soloGeneral=general>0&&med===0&&docs===0&&pas===0&&iny===0&&ins===0&&retorno===0;
-   const fg=soloGeneral?Math.max(3,peso(general)):peso(general);
+   const fg=peso(general); // Sin mínimo artificial de 3 lbs: 2.50 permanece 2.50.
    agregar('Carga general',fg*Number(p.general));pesoFacturable+=fg;
    const fm=med>0?Math.max(1,peso(med)):0;
    agregar('Medicamentos',fm*Number(p.medicamentos));pesoFacturable+=fm;
@@ -60,5 +56,4 @@ function calcularNICUSA(datos, precios={}) {
  agregar('Empaque térmico',ter*Number(p.termico));
  return {importe:money(lineas.reduce((s,l)=>s+l.importe,0)),pesoReal:money(totalReal),pesoFacturable:money(pesoFacturable),lineas,tarifasAplicadas:p};
 }
-
 window.BioMaxNICUSATarifas={TARIFAS,calcularNICUSA};
