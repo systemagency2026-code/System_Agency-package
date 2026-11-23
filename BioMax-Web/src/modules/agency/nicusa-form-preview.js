@@ -38,7 +38,8 @@
         if (estadoTarifa) estadoTarifa.textContent = 'No se ha identificado la agencia de tu sesión.';
         recalcular(); return;
       }
-      if (!sb) { if (estadoTarifa) estadoTarifa.textContent = 'Supabase no está disponible.'; return; }
+      const sb = obtenerSupabase();
+      if (!sb) { if (estadoTarifa) estadoTarifa.textContent = 'Esperando conexión de la agencia…'; return; }
       if (estadoTarifa) estadoTarifa.textContent = 'Consultando tarifas de la agencia…';
       const {data,error} = await sb.from('nicusa_tarifas_agencia')
         .select('categoria,precio,unidad').eq('agencia_id',agenciaId).limit(30);
@@ -223,7 +224,9 @@
     const aviso = document.getElementById('nicusa-aviso');
     const vuelo = document.getElementById('nicusa-vuelo');
     const boton = form?.querySelector('button[type="submit"]');
-    const sb = window.supabase;
+    // El dashboard carga como módulo ES: Supabase puede inicializarse después de este script defer.
+    // Consultar el cliente al usarlo evita capturar undefined al inicio.
+    const obtenerSupabase = () => window.supabase;
     // La agencia proviene del panel autenticado, no de un selector de SuperAdmin.
     function agenciaSesion() { return String(window.biomaxAgenciaActual?.id || ''); }
     async function sincronizarAgencia() {
@@ -231,12 +234,16 @@
       if (id && id !== agenciaTarifada) await cargarTarifas(id);
       return id;
     }
-    window.addEventListener('biomax:agencia-lista', () => { sincronizarAgencia(); });
+    window.addEventListener('biomax:agencia-lista', () => {
+      sincronizarAgencia().catch(e => { if (estadoTarifa) estadoTarifa.textContent = 'No se pudieron cargar tarifas: ' + e.message; });
+      cargarVuelos().catch(e => { if (aviso) aviso.textContent = 'No se pudieron cargar vuelos: ' + e.message; });
+    });
     if (agenciaSesion()) sincronizarAgencia();
     async function cargarVuelos() {
       if (vuelo) vuelo.disabled = true;
       if (boton) boton.disabled = true;
-      if (!sb) { aviso.textContent = 'No está disponible la conexión con Supabase.'; return; }
+      const sb = obtenerSupabase();
+      if (!sb) { if (aviso) aviso.textContent = 'Esperando conexión de la agencia…'; return; }
       const {data,error} = await sb.from('nicusa_vuelos').select('id,fecha').eq('publicado',true).gte('fecha',new Date().toISOString().slice(0,10)).order('fecha').limit(30);
       if(error) { aviso.textContent = 'No se pudieron consultar los vuelos: ' + error.message; return; }
       vuelo.replaceChildren(new Option('Seleccioná un vuelo',''));
@@ -284,6 +291,8 @@
       const confirmacion = document.getElementById('nicusa-confirmacion');
       if (confirmacion) confirmacion.hidden = true;
       try {
+        const sb = obtenerSupabase();
+        if (!sb) throw new Error('La conexión todavía no está disponible. Volvé a intentar.');
         const {data:{user},error:authError}=await sb.auth.getUser();
         if(authError || !user) throw new Error('Sesión no válida');
         // El panel de agencia ya vinculó esta sesión con su agencia.
@@ -310,7 +319,7 @@
       } catch(e) { aviso.textContent='No se pudo registrar: '+e.message; }
       finally { if(boton) boton.disabled = !vuelo?.value || vuelo.disabled; }
     });
-    if (sb) cargarVuelos();
+    if (obtenerSupabase()) cargarVuelos();
     // Si el panel terminó de autenticar antes que este módulo, sincronizar ahora.
     if (agenciaSesion()) sincronizarAgencia();
     grupo.addEventListener('input', event => {
