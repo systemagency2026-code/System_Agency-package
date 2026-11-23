@@ -27,7 +27,76 @@
       const campos=[['Referencia completa',r.id],['Agencia',agencias.get(r.agencia_id)||r.agencia_id],['Vuelo',vuelos.get(r.vuelo_id)||r.vuelo_id],['Remitente',r.remitente],['Teléfono remitente',r.remitente_telefono],['Destinatario',r.destinatario],['Teléfono destinatario',r.destinatario_telefono],['Dirección',[r.calle,r.apartamento,r.ciudad,r.estado,r.zip].filter(Boolean).join(', ')],['Inventario',r.inventario],['Categorías',Object.entries(r.categorias||{}).map(([k,v])=>k+': '+v).join(' · ')],['Peso real',peso(r.peso_real_agencia)],['Peso facturable',peso(r.peso_facturable)],['Importe agencia',money(r.importe_agencia)],['Observaciones',r.observaciones||'—']];
       const dl=document.createElement('dl');dl.style.cssText='display:grid;grid-template-columns:minmax(130px,200px) 1fr;gap:8px;white-space:pre-wrap;overflow-wrap:anywhere';
       for(const [k,v] of campos){const dt=document.createElement('dt');dt.textContent=k;dt.style.fontWeight='700';const dd=document.createElement('dd');dd.textContent=v??'—';dd.style.margin='0';dl.append(dt,dd);}detalle.append(dl);
-      if(r.foto_ruta){const b=document.createElement('button');b.type='button';b.className='btn-secondary';b.textContent='Ver fotografía privada';b.addEventListener('click',async()=>{b.disabled=true;try{const {data,error}=await sb.storage.from('nicusa-fotos').createSignedUrl(r.foto_ruta,60);if(error)throw error;window.open(data.signedUrl,'_blank','noopener,noreferrer');}catch(e){estado.textContent='No se pudo abrir la foto: '+e.message;}finally{b.disabled=false;}});detalle.append(b);}
+       // Mostrar foto original y anexos, sin perder compatibilidad con declaraciones anteriores.
+       const fotosPanel = document.createElement('section');
+       const fotosTitulo = document.createElement('h4'); fotosTitulo.textContent = 'Fotografías de la declaración';
+       const fotosLista = document.createElement('div');
+       fotosLista.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin:8px 0';
+       const fotosEstado = document.createElement('p'); fotosEstado.textContent = 'Consultando fotografías…';
+       fotosPanel.append(fotosTitulo, fotosLista, fotosEstado); detalle.append(fotosPanel);
+       let rutasFotos = r.foto_ruta ? [r.foto_ruta] : [];
+       let vigente = true;
+       async function actualizarFotos() {
+         fotosLista.replaceChildren();
+         const {data, error} = await sb.from('nicusa_envios_fotos')
+           .select('ruta,agregado_en').eq('envio_id',r.id).order('agregado_en',{ascending:true});
+         if (!fotosPanel.isConnected || !vigente) return;
+         if (error) { fotosEstado.textContent = 'No se pudieron consultar los anexos: ' + error.message; return; }
+         rutasFotos = [...(r.foto_ruta ? [r.foto_ruta] : []), ...(data || []).map(x=>x.ruta)];
+         fotosEstado.textContent = rutasFotos.length + ' de 5 fotografías.';
+         rutasFotos.forEach((ruta,i) => {
+           const b=document.createElement('button'); b.type='button'; b.className='btn-secondary';
+           b.textContent='Ver fotografía ' + (i+1);
+           b.addEventListener('click',async()=>{
+             // Abrir pestaña desde el clic para evitar bloqueo de popups tras el await.
+             const pestaña=window.open('','_blank');
+             if (!pestaña) { fotosEstado.textContent='Permití ventanas emergentes para ver la fotografía.'; return; }
+             b.disabled=true;
+             try { const {data,error}=await sb.storage.from('nicusa-fotos').createSignedUrl(ruta,60);
+               if(error) throw error; pestaña.location.href=data.signedUrl;
+             } catch(e) { pestaña.close(); fotosEstado.textContent='No se pudo abrir la fotografía: '+e.message; }
+             finally { b.disabled=false; }
+           }); fotosLista.append(b);
+         });
+         if (admin && rutasFotos.length < 5) {
+           const selector=document.createElement('input'); selector.type='file'; selector.multiple=true;
+           selector.accept='image/jpeg,image/png,image/webp';
+           selector.setAttribute('aria-label','Anexar fotografías a la declaración');
+           const agregar=document.createElement('button'); agregar.type='button'; agregar.className='btn-secondary';
+           agregar.textContent='Anexar fotografías';
+           agregar.addEventListener('click',async()=>{
+             const archivos=Array.from(selector.files||[]);
+             if (!archivos.length || archivos.length>5-rutasFotos.length) {
+               fotosEstado.textContent='Seleccioná de 1 a '+(5-rutasFotos.length)+' fotografía(s).';return;
+             }
+             if (archivos.some(f=>!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>5242880)) {
+               fotosEstado.textContent='Cada fotografía debe ser JPG, PNG o WebP y máximo 5 MB.';return;
+             }
+             agregar.disabled=true; fotosEstado.textContent='Anexando fotografías…';
+             let completadas=0;
+             try {
+               for (const foto of archivos) {
+                 const ext=foto.type==='image/png'?'png':foto.type==='image/webp'?'webp':'jpg';
+                 const ruta=r.agencia_id+'/'+crypto.randomUUID()+'.'+ext;
+                 const {error:uploadError}=await sb.storage.from('nicusa-fotos').upload(ruta,foto,{contentType:foto.type,upsert:false});
+                 if(uploadError) throw uploadError;
+                 const {error:rpcError}=await sb.rpc('nicusa_anexar_foto',{p_envio_id:r.id,p_ruta:ruta});
+                 if(rpcError) throw rpcError;
+                 completadas++;
+               }
+               await actualizarFotos();
+             } catch(e) {
+               await actualizarFotos();
+               fotosEstado.textContent='Se anexaron '+completadas+' fotografía(s). Error: '+e.message+
+                 '. Revisá el listado antes de intentar nuevamente.';
+             } finally { agregar.disabled=false; }
+           });
+           const zona=document.createElement('div'); zona.style.cssText='width:100%;display:flex;flex-wrap:wrap;gap:8px;align-items:center';
+           zona.append(selector,agregar); fotosLista.append(zona);
+         }
+       }
+       actualizarFotos().catch(e=>{fotosEstado.textContent='Error consultando fotografías: '+e.message;});
+
       // Etiqueta de 4 × 6 pulgadas: sin tarifas ni costos del transportador.
       const imprimir=document.createElement('button');
       imprimir.type='button';imprimir.className='btn-secondary';
