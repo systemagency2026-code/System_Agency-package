@@ -266,8 +266,13 @@
       telefono.closest('.form-field')?.append(lista);
       let secuencia = 0;
       let espera;
+      let completando = false;
       function ocultar() { lista.replaceChildren(); lista.style.display = 'none'; }
       function completar(c) {
+        // Invalidar consultas pendientes y evitar que el autollenado reactive sugerencias.
+        secuencia++;
+        clearTimeout(espera);
+        completando = true;
         const campos = {
           'nicusa-dest-nombre': c.nombre,
           'nicusa-dest-tel': c.telefono,
@@ -286,6 +291,7 @@
           }
         }
         ocultar();
+        completando = false;
       }
       async function buscar() {
         const solicitud = ++secuencia;
@@ -321,7 +327,14 @@
         }
         lista.style.display = resultados.length ? 'block' : 'none';
       }
-      function programar() { clearTimeout(espera); espera = setTimeout(buscar, 250); }
+      function programar() {
+        if (completando) return;
+        // Invalidar inmediatamente resultados de consultas anteriores.
+        secuencia++;
+        clearTimeout(espera);
+        ocultar();
+        espera = setTimeout(buscar, 250);
+      }
       nombre.addEventListener('input', programar);
       telefono.addEventListener('input', programar);
       form?.addEventListener('reset', () => { secuencia++; ocultar(); });
