@@ -17,6 +17,32 @@
     let agencias = new Map();
     let logosAgencias = new Map();
     let vuelos = new Map();
+    
+    async function cargarFechasHistoricas(sb, envios) {
+      const fechas = new Map();
+
+      for (const envio of envios) {
+        if (!envio.vuelo_id) continue;
+
+        const { data, error } = await sb.rpc(
+          'nicusa_fecha_vuelo_historial',
+          { p_envio_id: envio.id }
+        );
+
+        if (error) {
+          console.error('Error consultando fecha histórica:', error);
+          continue;
+        }
+
+        const registro = data?.[0];
+        if (registro?.vuelo_id && registro?.fecha) {
+          fechas.set(registro.vuelo_id, registro.fecha);
+        }
+      }
+
+      return fechas;
+    }
+
     let cargando = false;
 
     const money = v => 'US$' + Number(v || 0).toFixed(2);
@@ -285,7 +311,14 @@ ${logoAgencia ? `<img class="logo-agencia" src="${esc(logoAgencia)}" alt="Logo d
 
         agencias = new Map((a.data || []).map(x => [x.id, x.nombre]));
         logosAgencias = new Map((a.data || []).map(x => [x.id, x.logo_url || '']));
+        
         vuelos = new Map((v.data || []).map(x => [x.id, x.fecha]));
+
+        const fechasHistoricas = await cargarFechasHistoricas(sb, registros);
+        for (const [vueloId, fecha] of fechasHistoricas) {
+          vuelos.set(vueloId, fecha);
+        }
+
 
         if (vueloFiltro) {
           const selected = vueloFiltro.value;
