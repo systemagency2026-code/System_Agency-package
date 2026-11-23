@@ -234,6 +234,30 @@
       if(boton) boton.disabled = !(data||[]).length;
       aviso.textContent = (data||[]).length ? 'Seleccioná el vuelo y completá todos los campos.' : 'No hay vuelos publicados. Contactá al SuperAdmin.';
     }
+    // Hasta cinco fotos por declaración, sin alterar el formulario HTML existente.
+    const selectorFotos = document.getElementById('nicusa-foto');
+    if (selectorFotos) {
+      selectorFotos.multiple = true;
+      selectorFotos.accept = 'image/jpeg,image/png,image/webp';
+      const nota = document.createElement('small');
+      nota.textContent = 'Seleccioná de 1 a 5 fotografías (JPG, PNG o WebP; máximo 5 MB cada una).';
+      nota.style.cssText = 'display:block;margin-top:6px;color:#475569';
+      selectorFotos.insertAdjacentElement('afterend', nota);
+    }
+    const validarFotos = () => {
+      const fotos = Array.from(selectorFotos?.files || []);
+      if (fotos.length < 1 || fotos.length > 5) throw new Error('Seleccioná entre 1 y 5 fotografías.');
+      if (fotos.some(f => !['image/jpeg','image/png','image/webp'].includes(f.type) || f.size > 5242880))
+        throw new Error('Cada fotografía debe ser JPG, PNG o WebP y pesar máximo 5 MB.');
+      return fotos;
+    };
+    const subirFoto = async (sb, agenciaId, foto) => {
+      const extension = foto.type === 'image/png' ? 'png' : foto.type === 'image/webp' ? 'webp' : 'jpg';
+      const ruta = agenciaId + '/' + crypto.randomUUID() + '.' + extension;
+      const {error} = await sb.storage.from('nicusa-fotos').upload(ruta, foto, {contentType:foto.type,upsert:false});
+      if (error) throw error;
+      return ruta;
+    };
     form?.addEventListener('submit',async event=>{
       event.preventDefault();
       if(!form.reportValidity()) return;
@@ -266,8 +290,8 @@
         aviso.textContent = 'No se puede registrar sin las tarifas vigentes de la agencia. Revisá el tarifario.';
         return;
       }
-      const foto=document.getElementById('nicusa-foto')?.files?.[0];
-      if(!foto || !['image/jpeg','image/png','image/webp'].includes(foto.type) || foto.size>5242880) { aviso.textContent='La foto debe ser JPG, PNG o WebP y máximo 5 MB.';return; }
+      let fotos;
+      try { fotos = validarFotos(); } catch (e) { aviso.textContent = e.message; return; }
       if(boton) boton.disabled=true;
       aviso.textContent='Registrando envío…';
       const confirmacion = document.getElementById('nicusa-confirmacion');
@@ -283,14 +307,28 @@
           agenciaId=selector?.value;
           if(!agenciaId) throw new Error('Seleccioná una agencia');
         } else if(perfil.rol!=='agente' || !agenciaId) throw new Error('Acceso no autorizado');
-        const extension=foto.type==='image/png'?'png':foto.type==='image/webp'?'webp':'jpg';
-        const ruta=agenciaId+'/'+crypto.randomUUID()+'.'+extension;
-        const {error:uploadError}=await sb.storage.from('nicusa-fotos').upload(ruta,foto,{contentType:foto.type,upsert:false});
-        if(uploadError) throw uploadError;
+        const ruta = await subirFoto(sb, agenciaId, fotos[0]);
         const campo=id=>document.getElementById('nicusa-'+id)?.value.trim()||'';
         const envio={agencia_id:agenciaId,vuelo_id:vuelo.value,remitente:campo('remitente'),remitente_telefono:campo('remitente-tel'),destinatario:campo('dest-nombre'),destinatario_telefono:campo('dest-tel'),calle:campo('calle'),apartamento:campo('apto'),ciudad:campo('ciudad'),estado:campo('estado'),zip:campo('zip'),categorias,inventario:campo('inventario'),observaciones:campo('notas'),foto_ruta:ruta};
         const {data,error}=await sb.from('nicusa_envios').insert(envio).select('id,importe_agencia').single();
         if(error) throw error;
+        // La declaración ya existe: cualquier fallo posterior se informa sin duplicarla.
+        const erroresFotos = [];
+        for (let i = 1; i < fotos.length; i++) {
+          try {
+            const rutaAdicional = await subirFoto(sb, agenciaId, fotos[i]);
+            const {error:anexoError} = await sb.rpc('nicusa_anexar_foto', {p_envio_id:data.id, p_ruta:rutaAdicional});
+            if (anexoError) throw anexoError;
+          } catch (e) { erroresFotos.push('Foto ' + (i+1) + ': ' + e.message); }
+        }
+        if (erroresFotos.length) {
+          aviso.textContent = 'Declaración registrada con referencia ' + data.id.slice(0,8).toUpperCase() +
+            ', pero algunas fotografías no se vincularon: ' + erroresFotos.join(' · ') +
+            '. NO volvas a registrar el envío. Contactá a SuperAdmin para anexarlas.';
+          if (boton) boton.disabled = true;
+          window.dispatchEvent(new CustomEvent('biomax:nicusa-registrado'));
+          return;
+        }
         aviso.textContent='Envío registrado correctamente. Referencia: '+data.id.slice(0,8)+' · Importe: US$'+Number(data.importe_agencia).toFixed(2);
         const confirmacion = document.getElementById('nicusa-confirmacion');
         if (confirmacion) {
