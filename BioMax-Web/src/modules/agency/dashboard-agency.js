@@ -639,6 +639,7 @@ async function initAgenteDashboard() {
     setupAbonoYCierreBultos();
     setupMarcarRecibido();
     setupBusquedaCortes();
+    setupBusquedaContenedoresAgencia();
   } catch (err) {
     console.error("Error inicializando panel de agente:", err);
     await mostrarAlerta(
@@ -855,35 +856,102 @@ function setupModalCliente() {
   });
 }
 
-async function cargarContenedoresDeSucursal(agenciaId) {
-  const tbody = $("tabla-contenedores-agente-body");
+// Búsqueda en contenedores propios; la consulta se limita a la agencia autenticada.
+let contenedoresSucursalCache = [];
+let bultosSucursalBusquedaCache = [];
+let contenedoresSucursalError = '';
+
+async function consultarPaginasAgencia(tabla, columna, agenciaId) {
+  const filas = [];
+  for (let offset = 0; offset < 100000; offset += 1000) {
+    const { data, error } = await supabase.from(tabla).select('*')
+      .eq(columna, agenciaId).range(offset, offset + 999);
+    if (error) throw error;
+    filas.push(...(data || []));
+    if (!data || data.length < 1000) return filas;
+  }
+  throw new Error('Demasiados registros para consultar');
+}
+
+function filtrarContenedoresDeSucursal() {
+  const tbody = $('tabla-contenedores-agente-body');
+  const estado = $('resultado-busqueda-contenedores-agencia');
   if (!tbody) return;
-
-  const { data: cortes, error } = await supabase
-    .from("cortes_contenedores")
-    .select("*")
-    .eq("agencia_id", agenciaId)
-    .order("created_at", { ascending: false });
-
-  if (error || !cortes || cortes.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No hay contenedores asignados a tu sucursal.</td></tr>`;
+  const q = ($('buscar-contenedores-agencia')?.value || '').trim().toLocaleLowerCase();
+  const ids = new Set();
+  if (q) {
+    for (const b of bultosSucursalBusquedaCache) {
+      if ([b.tracking, b.cliente_nombre, b.estado].some(v => String(v ?? '').toLocaleLowerCase().includes(q))) {
+        ids.add(String(b.corte_id));
+      }
+    }
+  }
+  const cortes = contenedoresSucursalCache.filter(c =>
+    !q || [c.numero_corte, c.codigo_ref, c.tipo_envio, c.estado, c.estado_envio]
+      .some(v => String(v ?? '').toLocaleLowerCase().includes(q)) || ids.has(String(c.id))
+  );
+  tbody.innerHTML = '';
+  if (estado) estado.textContent = contenedoresSucursalError || (q ? `${cortes.length} contenedor(es) encontrados en tu agencia.` : `${cortes.length} contenedor(es) de tu agencia.`);
+  if (!cortes.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No se encontraron contenedores o paquetes de tu agencia.</td></tr>';
     return;
   }
-
-  tbody.innerHTML = "";
-  cortes.forEach((c) => {
-    const tr = document.createElement("tr");
+  cortes.forEach(c => {
+    const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${escapeHtml(c.tipo_envio || "—")}</td>
-      <td><strong>Corte ${escapeHtml(c.numero_corte || "N/D")}</strong></td>
+      <td>${escapeHtml(c.tipo_envio || '—')}</td>
+      <td><strong>Corte ${escapeHtml(c.numero_corte || 'N/D')}</strong></td>
       <td>${escapeHtml(fechaCorteTexto(c))}</td>
-      <td>${badgeHtml(c.estado || "Pendiente")}</td>
+      <td>${badgeHtml(c.estado || 'Pendiente')}</td>
       <td>${badgeEstadoEnvio(c.estado_envio)}</td>
-      <td><button type="button" class="btn-secondary btn-sm btn-detalle-agencia">Ver detalle</button></td>
-    `;
-    tr.querySelector(".btn-detalle-agencia")?.addEventListener("click", () => abrirDetalleContenedorAgencia(c));
+      <td><button type="button" class="btn-secondary btn-sm btn-detalle-agencia">Ver detalle</button></td>`;
+    tr.querySelector('.btn-detalle-agencia')?.addEventListener('click', () => abrirDetalleContenedorAgencia(c));
     tbody.appendChild(tr);
   });
+}
+
+async function cargarContenedoresDeSucursal(agenciaId) {
+  const tbody = $('tabla-contenedores-agente-body');
+  if (!tbody) return;
+  const estado = $('resultado-busqueda-contenedores-agencia');
+  if (estado) estado.textContent = 'Cargando contenedores y paquetes...';
+  try {
+    const cortes = await consultarPaginasAgencia('cortes_contenedores', 'agencia_id', agenciaId);
+    // Consulta limitada a IDs de cortes propios; también protege la búsqueda
+    // cuando los bultos no disponen de una columna agencia_id.
+    const bultos = [];
+    const ids = cortes.map(c => c.id).filter(Boolean);
+    for (let i = 0; i < ids.length; i += 60) {
+      const grupo = ids.slice(i, i + 60);
+      for (let offset = 0; offset < 100000; offset += 1000) {
+        const { data, error } = await supabase.from('paquetes_bultos').select('corte_id,tracking,cliente_nombre,estado')
+          .in('corte_id', grupo).range(offset, offset + 999);
+        if (error) throw error;
+        bultos.push(...(data || []));
+        if (!data || data.length < 1000) break;
+        if (offset >= 99000) throw new Error('Demasiados paquetes para consultar');
+      }
+    }
+    if (String(agenciaActual?.id) !== String(agenciaId)) return;
+    contenedoresSucursalCache = cortes.sort((a,b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    bultosSucursalBusquedaCache = bultos;
+    contenedoresSucursalError = '';
+    filtrarContenedoresDeSucursal();
+  } catch (error) {
+    console.error('Error al consultar contenedores de agencia:', error);
+    contenedoresSucursalCache = [];
+    bultosSucursalBusquedaCache = [];
+    contenedoresSucursalError = 'No se pudieron consultar los contenedores o paquetes: ' + (error.message || 'Error desconocido');
+    filtrarContenedoresDeSucursal();
+  }
+}
+
+function setupBusquedaContenedoresAgencia() {
+  const input = $('buscar-contenedores-agencia');
+  if (input && !input.dataset.busquedaLista) {
+    input.dataset.busquedaLista = '1';
+    input.addEventListener('input', filtrarContenedoresDeSucursal);
+  }
 }
 
 // Vista de consulta para la agencia: resumen y bultos sin acciones de edición.
