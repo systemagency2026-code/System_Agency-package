@@ -102,9 +102,9 @@
     if (!select) return;
     const card = document.createElement('section'); card.className='bmcal'; card.setAttribute('aria-label','Calendario de vuelos Nicaragua a Estados Unidos');
     card.innerHTML=`<div class="bmcal-head"><div><h3 class="bmcal-title">Calendario de vuelos</h3><div class="bmcal-sub">Nicaragua → Estados Unidos</div></div><div class="bmcal-legend"><span class="bmcal-pill bmcal-cut">🔒 Corte</span><span class="bmcal-pill bmcal-flight">✈ Vuelo</span></div></div><div class="bmcal-nav"><button type="button" data-prev aria-label="Mes anterior">‹</button><span class="bmcal-month" aria-live="polite"></span><button type="button" data-next aria-label="Mes siguiente">›</button></div><div class="bmcal-grid"></div><div class="bmcal-note">El corte es dos días calendario antes de cada vuelo. Solo aparecen vuelos disponibles para esta cuenta.</div>`;
-    addTariffViewer(card);
     const first = view.querySelector('article') || view.querySelector('form') || view.firstElementChild;
     if (first) view.insertBefore(card,first); else view.appendChild(card);
+    addTariffViewer(card);
     let now = new Date(), year=now.getFullYear(),month=now.getMonth();
     const render=()=>{
       const flights=datesFromSelect(select), cuts=new Set();
