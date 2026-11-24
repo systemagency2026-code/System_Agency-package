@@ -2392,6 +2392,7 @@ const REP_TARIFA_PEQUENO = 0.20;
 const REP_TARIFA_GRANDE = 1.00;
 let repUltimasFilas = [];
 let repPreparado = false;
+let repMaestras = new Map();
 function repNormalizar(s) { return String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
 function repDinero(n) { return "$" + n.toFixed(2); }
 function repTexto(s) { return String(s ?? "").replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
@@ -2444,10 +2445,11 @@ async function generarReporteOperativo() {
   estado.textContent='Consultando cortes y paquetes...';
   try {
     const [agencias,cortes]=await Promise.all([
-      repLeerTodo('agencias','id,nombre'),
+      repLeerTodo('agencias','id,nombre,agencia_maestra'),
       repLeerTodo('cortes_contenedores','id,agencia_id,tipo_envio,numero_corte')
     ]);
     const nombres=new Map(agencias.map(a=>[String(a.id),a.nombre||'—']));
+    repMaestras=new Map(agencias.map(a=>[String(a.id),a.agencia_maestra||'']));
     // Acepta varios cortes o palabras clave separados por comas.
     // Cada término se evalúa por separado (OR), conservando la búsqueda individual.
     const terminos=$('rep-busqueda').value.split(',').map(s=>repNormalizar(s.trim())).filter(Boolean);
@@ -2460,7 +2462,7 @@ async function generarReporteOperativo() {
       return coincide && (!agencia||String(c.agencia_id)===agencia) && (!modalidad||repModalidad(c.tipo_envio)===modalidad);
     });
     // Se consultan paquetes en lotes de cortes, evitando cargar paquetes de otros cortes.
-    const mapa=new Map(seleccion.map(c=>[String(c.id),{agencia:nombres.get(String(c.agencia_id))||'—',corte:c.numero_corte||'—',tipo:c.tipo_envio||'—',pequenos:0,grandes:0}]));
+    const mapa=new Map(seleccion.map(c=>[String(c.id),{agencia:nombres.get(String(c.agencia_id))||'—',maestra:repMaestras.get(String(c.agencia_id))||'',corte:c.numero_corte||'—',tipo:c.tipo_envio||'—',pequenos:0,grandes:0}]));
     const ids=seleccion.map(c=>c.id);
     for(let k=0;k<ids.length;k+=50) {
       const grupo=ids.slice(k,k+50);
@@ -2493,6 +2495,8 @@ function descargarReporteOperativoCSV() {
   const repFilas=repFilasVisibles();
   if(!repFilas.length)return;
   const filas=[['Agencia','Corte','Modalidad','Menores de 20 lb','Desde 20 lb','Total paquetes','Pago USD'],...repFilas.map(f=>[f.agencia,f.corte,f.tipo,f.pequenos,f.grandes,f.total,f.pago.toFixed(2)])];
+  filas.push([],['RESUMEN POR AGENCIA MAESTRA'],['Agencia maestra','Paquetes','Pago operativo USD']);
+  repResumenMaestras(repFilas).filter(g=>g.codigo||g.paquetes).forEach(g=>filas.push([g.titulo,g.paquetes,g.pago.toFixed(2)]));
   const csv='\uFEFF'+filas.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   const a=document.createElement('a');a.href=url;a.download='BioMax_Reporte_Operativo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -2506,6 +2510,32 @@ function repFilasVisibles() {
   return repUltimasFilas.filter(f=>(!corte||repNormalizar(f.corte).includes(corte))&&
     (!agencia||repNormalizar(f.agencia).includes(agencia))&&(!tipo||repModalidad(f.tipo)===tipo));
 }
+function repResumenMaestras(filas) {
+  const grupos=[
+    {codigo:'BIO',titulo:'BRING IT ON · BIO',paquetes:0,pago:0},
+    {codigo:'MML',titulo:'MARMAX LOGISTICS · MML',paquetes:0,pago:0},
+    {codigo:'',titulo:'SIN AGENCIA MAESTRA',paquetes:0,pago:0}
+  ];
+  for(const f of filas){
+    const grupo=grupos.find(g=>g.codigo===f.maestra)||grupos[2];
+    grupo.paquetes+=f.total;
+    grupo.pago+=f.pago;
+  }
+  return grupos;
+}
+function repPintarMaestras(filas) {
+  const tabla=$('rep-filas')?.closest('table');
+  if(!tabla)return;
+  let cont=$('rep-resumen-maestras');
+  if(!cont){
+    cont=document.createElement('div');
+    cont.id='rep-resumen-maestras';
+    cont.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0;';
+    tabla.parentNode.insertBefore(cont,tabla);
+  }
+  const grupos=repResumenMaestras(filas);
+  cont.innerHTML=grupos.filter(g=>g.codigo||g.paquetes).map(g=>`<div style="border:1px solid #dce2ed;border-radius:12px;padding:16px;background:#f8fafc"><div style="font-size:12px;font-weight:700;color:#475569;letter-spacing:.04em">${repTexto(g.titulo)}</div><div style="font-size:27px;font-weight:700;margin:8px 0;color:#0f172a">${repDinero(g.pago)}</div><div style="font-size:13px;color:#64748b">${g.paquetes} paquetes · Pago operativo</div></div>`).join('');
+}
 function repRenderFiltrado() {
   const filas=repFilasVisibles();
   const p=filas.reduce((n,f)=>n+f.pequenos,0),g=filas.reduce((n,f)=>n+f.grandes,0);
@@ -2513,6 +2543,7 @@ function repRenderFiltrado() {
   $('rep-grandes').textContent=g;
   $('rep-total').textContent=p+g;
   $('rep-pago').textContent=repDinero(filas.reduce((n,f)=>n+f.pago,0));
+  repPintarMaestras(filas);
   $('rep-filas').innerHTML=filas.length?filas.map(f=>`<tr><td>${repTexto(f.agencia)}</td><td>${repTexto(f.corte)}</td><td>${repTexto(f.tipo)}</td><td>${f.pequenos}</td><td>${f.grandes}</td><td>${f.total}</td><td>${repDinero(f.pago)}</td></tr>`).join(''):'<tr><td colspan="7">No hay resultados con los filtros actuales.</td></tr>';
   $('rep-csv').disabled=filas.length===0;
   $('rep-png').disabled=filas.length===0;
@@ -2521,7 +2552,7 @@ function repRenderFiltrado() {
 function descargarReporteOperativoPNG() {
   const filas=repFilasVisibles();
   if(!filas.length)return;
-  const width=1600, margin=45, rowH=43, headerY=250;
+  const width=1600, margin=45, rowH=43, headerY=375;
   const height=headerY+rowH*(filas.length+2)+60;
   const canvas=document.createElement('canvas');
   canvas.width=width*1.5;canvas.height=height*1.5;
@@ -2539,6 +2570,14 @@ function descargarReporteOperativoPNG() {
     c.fillStyle='#f1f5f9';c.fillRect(x,120,365,100);
     c.fillStyle='#475569';c.font='19px Arial';c.fillText(titulo,x+15,150);
     c.fillStyle='#0f172a';c.font='bold 31px Arial';c.fillText(String(valor),x+15,194);
+  });
+  const maestros=repResumenMaestras(filas).filter(g=>g.codigo||g.paquetes);
+  maestros.forEach((grupo,i)=>{
+    const x=margin+i*505;
+    c.fillStyle='#e8eef8';c.fillRect(x,240,490,105);
+    c.fillStyle='#475569';c.font='bold 17px Arial';c.fillText(grupo.titulo,x+15,267);
+    c.fillStyle='#0f172a';c.font='bold 29px Arial';c.fillText(repDinero(grupo.pago),x+15,308);
+    c.fillStyle='#64748b';c.font='16px Arial';c.fillText(grupo.paquetes+' paquetes',x+220,308);
   });
   const columnas=[['Agencia',margin,275],['Corte',340,125],['Modalidad',485,180],['Menores 20 lb',690,165],['Desde 20 lb',875,155],['Total',1070,130],['Pago USD',1300,210]];
   c.fillStyle='#0f172a';c.fillRect(margin,headerY,width-2*margin,rowH);
