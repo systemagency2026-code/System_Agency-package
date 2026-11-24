@@ -1,4 +1,4 @@
-/* BioMax NIC-USA: historial de solo lectura; usa RLS y limita resultados. */
+/* BioMax NIC-USA: historial con edición administrativa controlada; usa RLS. */
 (() => {
   async function iniciar() {
     const tabla = document.querySelector('#nicusa-hist-tabla tbody');
@@ -27,6 +27,90 @@
       const campos=[['Referencia completa',r.id],['Agencia',agencias.get(r.agencia_id)||r.agencia_id],['Vuelo',vuelos.get(r.vuelo_id)||r.vuelo_id],['Remitente',r.remitente],['Teléfono remitente',r.remitente_telefono],['Destinatario',r.destinatario],['Teléfono destinatario',r.destinatario_telefono],['Dirección',[r.calle,r.apartamento,r.ciudad,r.estado,r.zip].filter(Boolean).join(', ')],['Inventario',r.inventario],['Categorías',Object.entries(r.categorias||{}).map(([k,v])=>k+': '+v).join(' · ')],['Peso real',peso(r.peso_real_agencia)],['Peso facturable',peso(r.peso_facturable)],['Importe agencia',money(r.importe_agencia)],['Observaciones',r.observaciones||'—']];
       const dl=document.createElement('dl');dl.style.cssText='display:grid;grid-template-columns:minmax(130px,200px) 1fr;gap:8px;white-space:pre-wrap;overflow-wrap:anywhere';
       for(const [k,v] of campos){const dt=document.createElement('dt');dt.textContent=k;dt.style.fontWeight='700';const dd=document.createElement('dd');dd.textContent=v??'—';dd.style.margin='0';dl.append(dt,dd);}detalle.append(dl);
+       // Edición administrativa: solo datos que no alteran la liquidación calculada.
+       if (admin) {
+         const editar = document.createElement('button');
+         editar.type = 'button'; editar.className = 'btn-secondary';
+         editar.textContent = 'Editar declaración';
+         editar.style.cssText = 'margin:12px 0';
+         detalle.append(editar);
+         editar.addEventListener('click', () => {
+           if (detalle.querySelector('#nicusa-editor-admin')) return;
+           const panel = document.createElement('form');
+           panel.id = 'nicusa-editor-admin';
+           panel.style.cssText = 'padding:16px;border:1px solid #cbd5e1;border-radius:12px;margin:12px 0;display:grid;gap:12px;max-width:720px';
+           const titulo = document.createElement('h4');
+           titulo.textContent = 'Editar declaración ' + ref(r);
+           panel.append(titulo);
+           const nota = document.createElement('p');
+           nota.textContent = 'Podés corregir el vuelo y los datos de envío. Las categorías, pesos e importes se mantienen sin cambios para proteger el cálculo original.';
+           panel.append(nota);
+           const controles = {};
+           function campo(etiqueta, clave, multilinea = false, obligatorio = true) {
+             const cont = document.createElement('label');
+             cont.style.cssText = 'display:grid;gap:5px;font-weight:600';
+             cont.append(document.createTextNode(etiqueta));
+             const input = multilinea ? document.createElement('textarea') : document.createElement('input');
+             if (!multilinea) input.type = 'text';
+             input.className = 'form-input';
+             input.value = r[clave] || '';
+             input.required = obligatorio;
+             input.style.cssText = 'width:100%;box-sizing:border-box;font-weight:400';
+             cont.append(input);panel.append(cont);controles[clave] = input;
+           }
+           const vueloLabel = document.createElement('label');
+           vueloLabel.style.cssText = 'display:grid;gap:5px;font-weight:600';
+           vueloLabel.textContent = 'Fecha del vuelo *';
+           const vueloSelect = document.createElement('select');
+           vueloSelect.className = 'form-input'; vueloSelect.required = true;
+           for (const [id, fecha] of [...vuelos.entries()].sort((a,b)=>a[1].localeCompare(b[1]))) {
+             vueloSelect.add(new Option(fecha, id));
+           }
+           if (!vuelos.has(r.vuelo_id)) vueloSelect.add(new Option('Vuelo actual (no encontrado en listado)',r.vuelo_id));
+           vueloSelect.value = r.vuelo_id;
+           vueloLabel.append(vueloSelect);panel.append(vueloLabel);
+           campo('Remitente *','remitente');
+           campo('Teléfono remitente *','remitente_telefono');
+           campo('Destinatario *','destinatario');
+           campo('Teléfono destinatario *','destinatario_telefono');
+           campo('Calle y número *','calle');
+           campo('Apartamento','apartamento',false,false);
+           campo('Ciudad *','ciudad');
+           campo('Estado *','estado');
+           campo('ZIP *','zip');
+           campo('Inventario *','inventario',true);
+           campo('Observaciones','observaciones',true,false);
+           const mensaje = document.createElement('p');mensaje.setAttribute('role','status');panel.append(mensaje);
+           const acciones = document.createElement('div');acciones.style.cssText='display:flex;gap:10px;flex-wrap:wrap';
+           const guardar = document.createElement('button');guardar.type='submit';guardar.className='btn-primary';guardar.textContent='Guardar cambios';
+           const cancelar = document.createElement('button');cancelar.type='button';cancelar.className='btn-secondary';cancelar.textContent='Cancelar';
+           cancelar.addEventListener('click',()=>panel.remove());
+           acciones.append(guardar,cancelar);panel.append(acciones);
+           editar.insertAdjacentElement('afterend',panel);
+           panel.addEventListener('submit',async ev=>{
+             ev.preventDefault();if(!panel.reportValidity())return;
+             const cambios = {vuelo_id:vueloSelect.value};
+             for (const [clave,input] of Object.entries(controles)) cambios[clave]=input.value.trim();
+             if (!cambios.vuelo_id || !vuelos.has(cambios.vuelo_id)) {
+               mensaje.textContent='Seleccioná un vuelo válido del listado.';return;
+             }
+             if (!window.confirm('¿Confirmás guardar los cambios de la declaración '+ref(r)+'?'))return;
+             guardar.disabled=true;cancelar.disabled=true;mensaje.textContent='Guardando cambios…';
+             try {
+               const {data,error}=await sb.from('nicusa_envios').update(cambios).eq('id',r.id)
+                 .select('id,vuelo_id,remitente,remitente_telefono,destinatario,destinatario_telefono,calle,apartamento,ciudad,estado,zip,inventario,observaciones').single();
+               if(error)throw error;
+               if(!data)throw new Error('No se confirmó la actualización. Revisá permisos RLS.');
+               Object.assign(r,data);
+               mensaje.textContent='Cambios guardados correctamente.';
+               await cargar();
+               mostrarDetalle(r);
+               estado.textContent='Declaración '+ref(r)+' actualizada correctamente.';
+             }catch(e){mensaje.textContent='No se pudieron guardar los cambios: '+e.message;}
+             finally{guardar.disabled=false;cancelar.disabled=false;}
+           });
+         });
+       }
        // Mostrar foto original y anexos, sin perder compatibilidad con declaraciones anteriores.
        const fotosPanel = document.createElement('section');
        const fotosTitulo = document.createElement('h4'); fotosTitulo.textContent = 'Fotografías de la declaración';
