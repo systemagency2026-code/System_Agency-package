@@ -23,8 +23,58 @@
   .bmcal-mark.bmcal-cut{background:#fff1c8;color:#80500a}.bmcal-mark.bmcal-flight{background:#e2f1ff;color:#0957a6}
   .bmcal-note{font-size:12px;color:#64748b;margin-top:12px}
   @media(max-width:620px){.bmcal{padding:12px}.bmcal-cell{min-height:58px;padding:4px 1px}.bmcal-mark{font-size:9px}.bmcal-title{font-size:17px}.bmcal-month{font-size:16px}}
+  .bmcal-tarifas-btn{border:0;border-radius:9px;background:#073d88;color:#fff;padding:11px 15px;font-weight:700;cursor:pointer}
+  .bmcal-tarifas-overlay[hidden]{display:none!important}.bmcal-tarifas-overlay{position:fixed;inset:0;z-index:99999;background:#102747aa;display:flex;align-items:center;justify-content:center;padding:16px}
+  .bmcal-tarifas-dialog{background:#fff;color:#15243d;width:min(620px,100%);max-height:85vh;overflow:auto;border-radius:15px;padding:20px;box-shadow:0 15px 55px #0003}
+  .bmcal-tarifas-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.bmcal-tarifas-top h3{margin:0;font-size:20px}
+  .bmcal-tarifas-close{padding:9px 12px;background:#e2e8f0;border:0;border-radius:8px;cursor:pointer}
+  .bmcal-tarifas-table{border-collapse:collapse;width:100%;font-size:14px}.bmcal-tarifas-table th,.bmcal-tarifas-table td{text-align:left;padding:11px 8px;border-bottom:1px solid #e2e8f0}
+  @media(max-width:620px){.bmcal-tarifas-btn{width:100%}.bmcal-tarifas-dialog{padding:14px}.bmcal-tarifas-table{font-size:12px}}
   `;
   const style = document.createElement('style'); style.textContent = CSS; document.head.appendChild(style);
+  // Consulta de tarifas: únicamente agencia autenticada, sin precios predeterminados.
+  const LABELS = {general:'Carga general',medicamentos:'Medicamentos',documentos:'Documentos legales',pasaportes:'Pasaportes',inyectables:'Inyectables',retorno:'Retorno prepagado',insulina:'Insulina y derivados',termico:'Empaque térmico',promo5:'Combo 5 lbs',promo10:'Combo 10 lbs',promo15:'Combo 15 lbs',promo20:'Combo 20 lbs'};
+  const money = value => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value);
+  function addTariffViewer(card){
+    if (!card.closest('#view-nic-usa-agencia')) return;
+    const head=card.querySelector('.bmcal-head');
+    const button=document.createElement('button');button.type='button';button.className='bmcal-tarifas-btn';button.textContent='Ver tarifas de mi agencia';
+    head.insertBefore(button,head.querySelector('.bmcal-legend'));
+    const overlay=document.createElement('div');overlay.className='bmcal-tarifas-overlay';overlay.hidden=true;
+    const dialog=document.createElement('section');dialog.className='bmcal-tarifas-dialog';dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-label','Tarifas de mi agencia');
+    const title=document.createElement('h3');title.textContent='Tarifas de mi agencia';
+    const close=document.createElement('button');close.type='button';close.className='bmcal-tarifas-close';close.textContent='Cerrar';
+    const content=document.createElement('div');content.setAttribute('role','status');content.setAttribute('aria-live','polite');
+    const header=document.createElement('div');header.className='bmcal-tarifas-top';header.append(title,close);dialog.append(header,content);overlay.append(dialog);document.body.append(overlay);
+    const dismiss=()=>{overlay.hidden=true;button.focus()};
+    close.addEventListener('click',dismiss);
+    overlay.addEventListener('click',e=>{if(e.target===overlay)dismiss()});
+    overlay.addEventListener('keydown',e=>{if(e.key==='Escape')dismiss()});
+    button.addEventListener('click',async()=>{
+      overlay.hidden=false;close.focus();content.textContent='Consultando tarifas asignadas…';
+      const agencia=window.biomaxAgenciaActual;
+      const client=window.supabase;
+      if(!agencia?.id || !client){content.textContent='No se pudo identificar la agencia. Actualizá la página e intentá nuevamente.';return}
+      try{
+        const {data,error}=await client.from('nicusa_tarifas_agencia').select('categoria,precio,unidad').eq('agencia_id',agencia.id).order('categoria',{ascending:true});
+        if(error)throw error;
+        content.replaceChildren();
+        if(!data?.length){content.textContent='No hay tarifas disponibles para esta agencia. Consultá con administración.';return}
+        const table=document.createElement('table');table.className='bmcal-tarifas-table';
+        const thead=document.createElement('thead');const hr=document.createElement('tr');
+        ['Servicio','Tarifa','Unidad'].forEach(t=>{const th=document.createElement('th');th.textContent=t;hr.append(th)});thead.append(hr);table.append(thead);
+        const tbody=document.createElement('tbody');
+        data.forEach(item=>{
+          const amount=Number(item.precio);
+          if(!Number.isFinite(amount)||amount<0)return;
+          const tr=document.createElement('tr');
+          [LABELS[item.categoria]||String(item.categoria),money(amount),String(item.unidad||'—')].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td)});
+          tbody.append(tr);
+        });table.append(tbody);content.append(table);
+        if(!tbody.children.length)content.textContent='No hay tarifas válidas para mostrar.';
+      }catch(err){console.error('Tarifas de agencia:',err);content.textContent='No se pudieron consultar las tarifas. Verificá los permisos de lectura con administración.'}
+    });
+  }
   const MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const pad = n => String(n).padStart(2,'0');
   const key = (y,m,d) => `${y}-${pad(m+1)}-${pad(d)}`;
@@ -52,6 +102,7 @@
     if (!select) return;
     const card = document.createElement('section'); card.className='bmcal'; card.setAttribute('aria-label','Calendario de vuelos Nicaragua a Estados Unidos');
     card.innerHTML=`<div class="bmcal-head"><div><h3 class="bmcal-title">Calendario de vuelos</h3><div class="bmcal-sub">Nicaragua → Estados Unidos</div></div><div class="bmcal-legend"><span class="bmcal-pill bmcal-cut">🔒 Corte</span><span class="bmcal-pill bmcal-flight">✈ Vuelo</span></div></div><div class="bmcal-nav"><button type="button" data-prev aria-label="Mes anterior">‹</button><span class="bmcal-month" aria-live="polite"></span><button type="button" data-next aria-label="Mes siguiente">›</button></div><div class="bmcal-grid"></div><div class="bmcal-note">El corte es dos días calendario antes de cada vuelo. Solo aparecen vuelos disponibles para esta cuenta.</div>`;
+    addTariffViewer(card);
     const first = view.querySelector('article') || view.querySelector('form') || view.firstElementChild;
     if (first) view.insertBefore(card,first); else view.appendChild(card);
     let now = new Date(), year=now.getFullYear(),month=now.getMonth();
