@@ -87,7 +87,7 @@
         if (!(pesoFisico > 0)) throw Error('El peso físico debe ser mayor que cero.');
         const categoriasPesadas = (datos.general || 0) + (datos.medicamentos || 0) + (datos.retorno || 0);
         if (pesoFisico + 1e-8 < categoriasPesadas) throw Error('El peso físico total no puede ser menor que la suma de los pesos declarados por categoría.');
-        datos.pesoOtros = Math.max(0, pesoFisico - categoriasPesadas);
+        datos.pesoFisicoPromo = pesoFisico;
       }
       return datos;
     }
@@ -370,18 +370,13 @@
       if(!form.reportValidity()) return;
       const checks=[...grupo.querySelectorAll('input[type="checkbox"]:checked')];
       if(!checks.length || checks.some(c=>c.value==='otros')) { aviso.textContent='Seleccioná una categoría habilitada.';return; }
-      // Seguridad: la base V7 solo confirma soporte para las tres categorías originales.
-      const nuevas = checks.filter(c => !['general','medicamentos','documentos'].includes(c.value));
-      if (nuevas.length) {
-        aviso.textContent = 'La simulación está disponible, pero el registro de estas categorías requiere actualizar y verificar el cálculo del servidor en Supabase. No se guardará un importe incorrecto.';
-        return;
-      }
+      // Las 12 categorías se validan contra el tarifario de la agencia y el servidor.
       const categorias={};
       for(const check of checks) {
         const value=document.getElementById('nicusa-carga-'+check.value)?.value.trim();
         if(!value || !/^(?:\d+(?:[.,]\d+)?|[.,]\d+)$/.test(value)) { aviso.textContent='Ingresá un peso o cantidad válido por categoría.';return; }
         const num=Number(value.replace(',','.'));
-        if(!(num>0) || (check.value==='documentos'&&!Number.isInteger(num))) { aviso.textContent='Revisá los pesos y las unidades de documentos.';return; }
+        if(!(num>0) || (!['general','medicamentos','retorno'].includes(check.value)&&!Number.isInteger(num))) { aviso.textContent='Revisá los pesos y las unidades de documentos.';return; }
         categorias[check.value]=num;
       }
       // Validar máximo de medicamentos por declaración.
@@ -393,10 +388,24 @@
       }
       const agenciaSeleccionada = agenciaSesion();
       if (!agenciaSeleccionada || agenciaSeleccionada !== agenciaTarifada ||
-          checks.some(c => !tarifas[c.value] || tarifas[c.value].unidad !== (c.value === 'documentos' ? 'unidad' : 'lb'))) {
+          checks.some(c => !tarifas[c.value] || tarifas[c.value].unidad !== (['general','medicamentos','retorno'].includes(c.value) ? 'lb' : 'unidad'))) {
         aviso.textContent = 'No se puede registrar sin las tarifas vigentes de la agencia. Revisá el tarifario.';
         return;
       }
+      const promoSeleccionada=checks.find(c=>c.value.startsWith('promo'))?.value;
+      if(promoSeleccionada){
+        const beneficio=document.getElementById('nicusa-beneficio')?.value||'ninguno';
+        const fisico=document.getElementById('nicusa-peso-fisico-promo')?.value?.trim().replace(',','.');
+        if(!fisico||!Number.isFinite(Number(fisico))||Number(fisico)<=0){aviso.textContent='Ingresá peso físico válido del combo.';return;}
+        categorias._beneficio=beneficio;
+        categorias._peso_fisico=Number(fisico);
+      }
+      try {
+        const motor=window.BioMaxNICUSATarifas;
+        if(!motor?.calcularNICUSA)throw Error('Motor de tarifas no disponible');
+        const datos={...categorias,promo:promoSeleccionada||null,beneficio:categorias._beneficio||'ninguno',pesoFisicoPromo:categorias._peso_fisico};
+        motor.calcularNICUSA(datos,preciosActuales());
+      }catch(e){aviso.textContent='Validación: '+e.message;return;}
       let fotos;
       try { fotos = validarFotos(); } catch (e) { aviso.textContent = e.message; return; }
       if(boton) boton.disabled=true;
