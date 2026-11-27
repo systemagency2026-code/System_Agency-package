@@ -1176,6 +1176,7 @@ async function cargarCortesGlobalesAdmin() {
       <td>
         Corte ${escapeHtml(c.numero_corte || "N/D")}
         ${c.codigo_ref ? `<br><small class="cell-muted">#${escapeHtml(c.codigo_ref)}</small>` : ""}
+        <br><button type="button" class="btn-secondary btn-sm btn-editar-numero-corte" data-id="${escapeHtml(String(c.id))}" style="margin-top:6px">Editar corte / referencia</button>
       </td>
       <td>${escapeHtml(fechaCorteTexto(c))}</td>
       <td><strong>${st.n}</strong></td>
@@ -1195,6 +1196,45 @@ async function cargarCortesGlobalesAdmin() {
 
   aplicarFiltrosCortes();
   if ($('cf-corte')?.value.trim()) biomaxActualizarBusquedaGlobal();
+
+  // Admin global y operador pueden corregir el número de corte.
+  // El servidor aplica sus permisos RLS; nunca se usa una clave privilegiada.
+  tbody.querySelectorAll(".btn-editar-numero-corte").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const corte = cortesCache.find((c) => String(c.id) === String(id));
+      if (!corte || !["admin", "operador"].includes(rolUsuario)) return;
+      const anterior = String(corte.numero_corte ?? "").trim();
+      const entrada = window.prompt("Corregir corte / referencia:", anterior);
+      if (entrada === null) return;
+      const nuevo = entrada.trim();
+      if (!nuevo || nuevo.length > 80) {
+        await mostrarAlerta("Dato inválido", "Ingresá una referencia de 1 a 80 caracteres.");
+        return;
+      }
+      if (nuevo === anterior) return;
+      btn.disabled = true;
+      try {
+        const { data, error } = await supabase
+          .from("cortes_contenedores")
+          .update({ numero_corte: nuevo })
+          .eq("id", id)
+          .select("id,numero_corte")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data || String(data.numero_corte) !== nuevo) {
+          throw new Error("No se confirmó la actualización. Revisá los permisos del operador en Supabase.");
+        }
+        corte.numero_corte = nuevo;
+        await cargarCortesGlobalesAdmin();
+        await mostrarAlerta("Actualizado", `Corte / referencia corregido de ${anterior || "(vacío)"} a ${nuevo}.`);
+      } catch (err) {
+        await mostrarAlerta("No se pudo actualizar", err.message || String(err));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
 
   tbody.querySelectorAll(".select-estado-envio").forEach((sel) => {
     sel.addEventListener("change", async (e) => {
